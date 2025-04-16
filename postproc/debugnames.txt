@@ -1,0 +1,56 @@
+MAIN VARIABLES OUTPUT
+
+(.true. --> it will be exported to the tec file. .false.--> it won't)
+
+pressure    = .true.
+u-velocity  = .true.
+v-velocity  = .true.
+w-velocity  = .true.
+nu-t        = .true.
+phi         = .true.
+
+
+DEBUGGING VARIABLES OUTPUT
+
+Number of variables = 0
+
+NAME OF THE VARIABLES TO BE EXPORTED
+
+phi_pregfm
+phin_pregfm
+p_postgfm
+u_postgfm
+v_postgfm
+w_postgfm
+p_postbcond1
+u_postbcond1
+v_postbcond1
+w_postbcond1
+diss
+div
+pgradX
+pgradY
+pgradZ
+nonlinearX
+nonlinearY
+nonlinearZ
+rhsprediagC
+rhsprediagX
+rhsprediagY
+rhsprediagZ
+rh1_pre_diag
+rh2_pre_diag
+rh3_pre_diag
+rh4_pre_diag
+rh1_post_diag
+rh2_post_diag
+rh3_post_diag
+rh4_post_diag
+p_post_diag
+u_post_diag
+v_post_diag
+w_post_diag
+p_post_bcond_sdaf
+u_post_bcond_sdaf
+v_post_bcond_sdaf
+w_post_bcond_sdaf

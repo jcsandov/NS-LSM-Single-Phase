@@ -1,0 +1,338 @@
+!_________________________________________________
+! CONTROL FILE
+!-------------------------------------------------
+! 1. MESH DETAILS
+! 2. SIMULATION PARAMETERS
+! 3. BOUNDARY CONDITIONS
+! 4. RUN OPTIONS
+! 5. BLANKING
+! 6. PARALELIZATION
+! 7. INPUT DIRECTORIES
+! 8. OUTPUT DIRECTORIES
+! 9. QUEUE FILE
+
+!_________________________________________________
+! 1. MESH DETAILS
+!-------------------------------------------------
+
+imax = 371 
+jmax = 161
+kmax = 121
+
+!_________________________________________________
+! 2. SIMULATION PARAMETERS
+!-------------------------------------------------
+
+!________________________
+! Flow solver
+!------------------------
+
+Reynolds_number = 200.0
+CFL_number = 0.1
+Von_Neumann_number = 0.1
+beta = 1.0
+pressure_dissipation_coefficient = 0.1
+dynamic_dtau = .false.
+
+eps_x = 1.5
+eps_y = 1.5
+eps_z = 1.5
+
+CFL_turbulence_model = 0.5
+Von_Neumann_turbulence_model = 0.05
+
+!________________________
+! Level-Set
+!------------------------
+
+epsilon = 0.004
+rho_air/rho_ref = 0.0012
+mu_air/mu_ref = 0.018
+pressure_dissipation_LSM_air = 0.1
+pressure_dissipation_LSM_ref = 0.1
+Weber_number = 0.0033518266 
+Froude_number = 0.756
+BigPhi = 5.00
+
+!_________________________________________________
+! 3. BOUNDARY CONDITIONS
+!-------------------------------------------------
+
+!________________________
+! Flow solver
+!------------------------
+
+! Categories (keywords):
+!    interface
+!    wall
+!    symmetry_plane
+!    freestream
+!    inflow
+!    outflow
+!    MOC
+!    periodic
+!    slip_wall
+
+i1 = inflow
+im = outflow
+j1 = wall
+jm = slip_wall
+k1 = wall
+km = wall
+
+!________________________
+! Level-Set
+!------------------------
+
+! Categories (keywords):
+!    absorption
+!    extrapolation
+!        upwind
+!        central_difference
+!    advection
+
+
+i1_LSM = extrapolation
+im_LSM = extrapolation
+j1_LSM = extrapolation
+jm_LSM = extrapolation
+k1_LSM = extrapolation
+km_LSM = extrapolation
+
+extrapolation_option = upwind
+
+!_________________________________________________
+! 4. RUN OPTIONS
+!-------------------------------------------------
+
+!________________________
+! Flow solver
+!------------------------
+
+dt = 0.0001
+total_time_steps = 10000
+solu_restart_update_iterations = 10
+usolu_save_iterations = 100
+pseudo_time_min_iterations = 21
+pseudo_time_max_iterations = 1000
+monitoring_points = 1
+
+! specific time steps to be saved for debbuging
+NS_time_steps_to_save = 46,47,48,49
+
+! point coordinates separated by commas
+! and without spaces in between
+
+point1_coordinates = 1,1,1,1
+
+! switch to activate the flow solver (keywords):
+!   .true. / .false.
+
+call_solver_daf = .true.
+
+!________________________
+! Level-Set
+!------------------------
+
+level_set_advection_iterations = 10
+reinitialization_iterations = 15
+reinitialization_dtau = 0.00078125
+epsReinitialisation = 1.0E-05
+reinitilization_iteration_frequency = 1
+phi_save_iterations = 100
+
+zero_pressure_fs = .false.
+limit_ghost_velocities = .false.
+
+hydraulic_mode = .true.
+
+! specific time steps to be saved for debbuging (set to 0 if
+! there are no time steps to save for debugging)
+
+LS_time_steps_to_save = 46,47,48,49
+
+! Narrow Band Options (keywords):
+    on / off
+
+narrow_band = off
+narrow_band_thickness = 3.0
+
+! Advection Scheme Categories (keywords):
+!    UPWIND / WENO3
+
+advection_scheme = WENO3
+
+! Boundary derivative order for the advection step (1, 2 or 3):
+
+OrderLSAdvectionBoundaries = 2
+
+! Boundary derivative order for the reinitalisation step (1, 2 or 3):
+
+OrderReinitialisationBoundaries = 1
+
+! if OrderReinitialisationBoundaries == 2, I can set the derivative reconstruction
+! using an ENO2 one-sided method:
+
+ENOBCReinitialisation = .false.
+
+
+! lambda: Sussman correction parameter method (keywords):
+!    point_constant / simpson_rule
+
+sussman_correction_method = point_constant
+
+number_of_obstacles = 0
+
+! switch to activate the levelsetmethod (keywords):
+!    .true. / .false.
+
+call_levelsetmethod = .true.
+
+! switch to activate reinitialisation (keywords):
+!    .true. / .false.
+
+call_reinitialisation = .true.
+
+! switch to activate hybrid (geometric) reinitialisation (keywords):
+!    .true.  (Hybrid: geometric next to the free-surface + Sussman elsewhere)
+!    .false. (Sussman everywhere)
+
+hybrid_reinitialisation = .true.
+
+! Geometric Reinitialisation options:
+
+    ! ConvergenceToleranceGeomReini : Is the convergence tolerance of the neighbour
+    !                                 correction step (step 4). Is the global volume
+    !                                 difference between the initial volume enclosed
+    !                                 by the neighbours and the volume once phi is 
+    !                                 corrected using the algorithm. It's suggested
+    !                                 to be third or fourth order accurate (dx^3)
+
+ConvergenceToleranceGeomReini = 1.0E-09
+
+! Ghost Fluid Method (gfm) options:
+
+    ! sweep_lsqm  : of neighbour nodes to be considered for 
+    !               lsqm matrix sytems (usually three)
+
+    ! radius_lsqm : radius_lsqm*dx is the spatial radius 
+    !               considered for lsqm matrix system
+                     
+sweep_lsqm = 3
+radius_lsqm = 3.5
+
+! Water phase volume computation
+!
+!    .true.  --> Compute the total volume of the water phase and write it onto the
+!                file GlobalMass.txt
+
+    TotalVolumeComputation = .false.
+
+
+! To turn on/off the Newton Raphson algorithm to apply the global mass correction
+! if it's false, it just keeps the signed distance as the reinitialisation.
+
+    GlobalMassCorrection = .false.
+
+!_________________________________________________
+! 5. BLANKING
+!-------------------------------------------------
+
+blanking_zones = 2 
+non_slip_wall_blanking = .true.
+
+! Store block coordinates as lists where each index represents a zone
+! Ex: iblk1 first zone: 181 ; iblk1 Second zone: 100
+
+iblk1 = [ 1   , 251 ]
+iblk2 = [ 151 , 371 ]
+jblk1 = [ 1   , 1   ]
+jblk2 = [ 101 , 101 ]
+kblk1 = [ 1   , 1   ]
+kblk2 = [ 121 , 121 ]
+
+
+!_________________________________________________
+! 6. PARALELIZATION
+!-------------------------------------------------
+
+number_of_processes = 50
+
+! Computational directions split: enter the number
+! of processes the grid is divided in each 
+! computational directionn
+!
+!    0: mpi decides
+!    N: user decides the number 
+
+i_direction_processes = 0
+j_direction_processes = 0
+k_direction_processes = 1
+
+!_________________________________________________
+! 7. INPUT DIRECTORIES
+!-------------------------------------------------
+
+source_code = src/
+grid_file_path = grid_cavity_Navas
+solu_file_path = solu_cavity_Navas
+phi_ini_file_path = phi_ini_cavity_Navas
+
+!_________________________________________________
+! 8. OUTPUT DIRECTORIES
+!-------------------------------------------------
+
+! Example: folder1/folder2/ .../foldern/ 
+! (last "/" is important for folders)
+
+output_directory = output/
+decofiles_directory = decofiles/
+
+!_________________________________________________
+! 9. QUEUE FILE
+!-------------------------------------------------
+
+queue_filename = queue
+
+#!/bin/bash
+
+#SBATCH -J cchannel          # Job name
+#SBATCH -p general           # Partition (queue)
+#SBATCH -n 100               # Number of tasks (cores)
+#SBATCH --mem=180000         # Memory request (in MB)
+#SBATCH --mail-type=ALL      # Send email on all job events
+#SBATCH -o cchannel_%j.out   # Standard output file
+#SBATCH -e cchannel_%j.err   # Standard error file
+
+# Load necessary modules
+ml purge                                 # Clean the environment
+ml ifort/2018.5.274-GCC-8.2.0-2.31.1     # Intel Fortran compiler with GCC support
+ml icc/2018.5.274-GCC-8.2.0-2.31.1       # Intel C++ compiler with GCC support
+ml impi/2018.4.274                       # Intel MPI version 2018.4.274
+
+# Source Spack environment
+. ~/spack/share/spack/setup-env.sh
+
+# Check if OpenBLAS is installed with Intel 18.0.5
+if ! spack find --format "{name}@{version}%{compiler}" openblas %intel@18.0.5 | grep -q "openblas"; then
+  echo "OpenBLAS not found. Installing OpenBLAS with Intel 18.0.5..."
+  spack install openblas %intel@18.0.5
+else
+  echo "OpenBLAS is already installed."
+fi
+
+spack load openblas %intel@18.0.5
+
+# Set the OpenBLAS directory
+OPENBLAS_DIR=$(spack location -i openblas%intel@18.0.5)
+
+# Update LD_LIBRARY_PATH to include OpenBLAS libraries
+export LD_LIBRARY_PATH=$OPENBLAS_DIR/lib:$LD_LIBRARY_PATH
+
+# Debugging: Print the OpenBLAS directory (optional, remove this after testing)
+echo "OpenBLAS_DIR is $OPENBLAS_DIR"
+
+# Run the program with srun (for MPI execution)
+srun -v ./channel &> output.dat
+
+

@@ -1,0 +1,25 @@
+MAIN VARIABLES OUTPUT
+
+(.true. --> it will be exported to the tec file. .false.--> it won't)
+
+pressure    = .false.
+u-velocity  = .false.
+v-velocity  = .false.
+w-velocity  = .false.
+nu-t        = .false.
+phi         = .false.
+
+
+DEBUGGING VARIABLES OUTPUT
+
+Number of variables = 1
+Number of points    = 1
+
+NAME OF THE VARIABLES TO BE EXPORTED
+
+h
+
+LIST OF POINTS TO EXTRACT TIME SERIES
+
+1 6 1
+
