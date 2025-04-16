@@ -46,6 +46,7 @@ except:
 # Date and time for log_files
 now = datetime.now()
 dt_string = now.strftime("%Y_%m_%d_%H_%M_%S")
+# current_working_directory = directory where this py script is set to run
 current_working_directory = os.getcwd()
 
 
@@ -55,7 +56,7 @@ def execute(command):
 
 def make_clean(parameters):
     p = parameters
-    src_directory = f"{current_working_directory}/{p['source_code']}"
+    src_directory = f"{p['source_code']}"
     os.chdir(src_directory)
     execute(f"make clean")
     os.chdir(current_working_directory)
@@ -79,7 +80,8 @@ def compile(parameters):
         print(f"Unknown server: {server_name}. The compilation will be carried out using make only")
         execute(f"make")
 
-    execute(f"mv channel ../")
+    # Move the executable to the current directory
+    execute(f"mv channel {current_working_directory}")
     os.chdir(current_working_directory)
 
 
