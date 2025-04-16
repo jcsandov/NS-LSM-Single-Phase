@@ -67,7 +67,7 @@ def compile(parameters):
     # Get the hostname of the server
     server_name = socket.gethostname()
    
-    src_directory = f"{current_working_directory}/{p['source_code']}"
+    src_directory = f"{p['source_code']}"
     os.chdir(src_directory)
     #execute(f"make")
 
