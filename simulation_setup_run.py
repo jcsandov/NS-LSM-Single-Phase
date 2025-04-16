@@ -71,9 +71,9 @@ def compile(parameters):
     os.chdir(src_directory)
     #execute(f"make")
 
-    if server_name == 'Dellemc':
+    if 'Dell' in server_name:
         execute(f"make fondecyt")
-    elif server_name == 'leftraru2':
+    elif 'leftraru' in server_name:
         execute(f"make leftraru")
     else:
         # Default case if the server name is not recognized
