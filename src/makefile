@@ -11,7 +11,7 @@ endif
 
 ifeq ($(CONFIG),leftraru)
     F90COMP = mpif90
-    FFLAGS = -O0 -g
+    FFLAGS = -O3 -g
     OPENBLAS_DIR = $(shell spack location -i 'openblas%intel@18.0.5')
     LIBS = -L$(OPENBLAS_DIR)/lib -lopenblas -lpthread -lm
 endif

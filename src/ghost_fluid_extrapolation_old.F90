@@ -71,11 +71,7 @@ integer :: i_mysta, &
            j_myend, &
            k_myend
 
-integer :: ilsearch, jlsearch, klsearch, iusearch, jusearch, kusearch ! serching for near layer
-
 real (kind = rdf), dimension(:,:,:,:), allocatable :: phi_gradient ! ∂phi/∂x_j
-real (kind = rdf), dimension(:,:,:)  , allocatable :: rsign_aux 
-real (kind = rdf) :: sum_aux
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 ! normal-tangential vector system
@@ -83,7 +79,7 @@ real (kind = rdf) :: sum_aux
 real (kind = rdf), dimension(1:3,-1:1,-1:1,-1:1) :: csi_work, eta_work, zet_work
 real (kind = rdf), dimension(-1:1,-1:1,-1:1) :: aj_work
 real (kind = rdf) :: dc2, de2, dz2
-!real (kind = rdf) :: dphi_dcsi, dphi_deta, dphi_dzet
+real (kind = rdf) :: dphi_dcsi, dphi_deta, dphi_dzet
 real (kind = rdf), dimension(-1:1,-1:1,-1:1) :: phi_work
 real (kind = rdf), dimension(1:3,-1:1,-1:1,-1:1) :: phi_grad_work
 real (kind = rdf), dimension(1:3) :: nvec, tvec, svec ! local normal and tangential vectors
@@ -226,147 +222,14 @@ error_sdir = zero
 ! phi gradient computation
 ! phi_gradient = (dϕ/dx, dϕ/dx, dϕ/dz)
 ! TO DO: gradient and hessian should be contained in different external files
-! TO DO: compute the gradient and the hessian just in the area near the free surface
 
-least_dis_extp = 40.0_rdf
-phi_gradient   = zero
-dc2            = one_half * dc
-de2            = one_half * de
-dz2            = one_half * dz
+phi_gradient = zero
+dc2          = one_half * dc
+de2          = one_half * de
+dz2          = one_half * dz
 
 ! we get the phi gradient over the whole domain (of the current processor)
 call calc_phi_gradient()
-
-
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -                                                                                                                                          
-!
-!  #    # ###### #       ####  ##### #  ####  ##### #   #                              
-!  #    # #      #      #    #   #   # #    #   #    # #                               
-!  #    # #####  #      #    #   #   # #        #     #                                
-!  #    # #      #      #    #   #   # #        #     #                                
-!   #  #  #      #      #    #   #   # #    #   #     #                                
-!    ##   ###### ######  ####    #   #  ####    #     #                                                        
-!                                                                                                                                                                           
-!  ###### #    # ##### #####    ##   #####   ####  #        ##   ##### #  ####  #    # 
-!  #       #  #    #   #    #  #  #  #    # #    # #       #  #    #   # #    # ##   # 
-!  #####    ##     #   #    # #    # #    # #    # #      #    #   #   # #    # # #  # 
-!  #        ##     #   #####  ###### #####  #    # #      ######   #   # #    # #  # # 
-!  #       #  #    #   #   #  #    # #      #    # #      #    #   #   # #    # #   ## 
-!  ###### #    #   #   #    # #    # #       ####  ###### #    #   #   #  ####  #    #                                                                                      
-!                                                                                      
-!  #    # ######   ##   #####     #        ##   #   # ###### #####                     
-!  ##   # #       #  #  #    #    #       #  #   # #  #      #    #                    
-!  # #  # #####  #    # #    #    #      #    #   #   #####  #    #                    
-!  #  # # #      ###### #####     #      ######   #   #      #####                     
-!  #   ## #      #    # #   #     #      #    #   #   #      #   #                     
-!  #    # ###### #    # #    #    ###### #    #   #   ###### #    #                    
-!
-! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -                                                                                                                                          
-
-allocate ( rsign_aux ( il:iu , jl:ju , kl:ku ) )
-
-rsign_aux = rsign
-
-do k = il , iu
-do j = jl , ju
-do i = kl , ku
-         
-   ! ----------------------------------------------------------------------------
-   ! 1. Identify if the node i,j,k has to be extrapolated based on rsign value
-   ! ----------------------------------------------------------------------------
-   ! if rsign(i,j,k) = 0 (air-phase), but one of its neighbors is in the water
-   ! phase (rsign = 1), then this if is true. This condition identifies air nodes
-   ! next to the free-surface
-   ! ----------------------------------------------------------------------------
-
-   ilsearch = max( il , i-1 )
-   iusearch = min( iu , i+1 )
-
-   jlsearch = max( jl , j-1 )
-   jusearch = min( ju , j+1 )
-
-   klsearch = max( kl , k-1 )
-   kusearch = min( ku , k+1 )
-
-   ! The first if is to reduce as much as I can the area of the domain where I'm gonna
-   ! the adjacency to the free-surface. This is because the search over the 
-   ! rsign(i-1:i+1,j-1:j+1,k-1:k+1) neighbourhood is computationally costly.
-
-   if ( rsign(i,j,k) > one_half .and. phi(i,j,k) < ten  ) then
-
-      ! I check the i±1,j±1,k±1 directions. If any of them lie within the air phase,
-      ! then AirNodeAround < 1/2 == .true. and the interpolation is performed
-
-      if (   rsign( ilsearch , j , k   ) * rsign( iusearch , j , k ) * &
-             rsign( i , jlsearch , k   ) * rsign( i , jusearch , k ) * &
-             rsign( i , j   , klsearch ) * rsign( i , j , kusearch )  < one_half ) then
-
-         rsign_aux(i,j,k) = zero
-
-      end if
-
-   end if
-
-end do
-end do
-end do
-
-
-do k = k_mysta, k_myend
-do j = j_mysta, j_myend
-do i = i_mysta, i_myend
-
-   ! Only the layer near the free-surface
-   if( ( one - rsign_aux(i,j,k) ) * rsign(i,j,k) > one_half ) then
-
-      exsign = 0
-      velocity_curv_gradient = zero ! variable initialisation before update
-
-      ! velocity_curv_gradient = ∂u_i/∂ξ^m tensor                  
-      call velocity_curv_gradient_tensor_near_layer(i,j,k-1, velocity_curv_gradient, exsign)
-
-      metric_tensor_vg = zero ! vg means velocity gradient
-
-      ! metric_tensor_vg = ∂ξ^m/∂x_j
-
-      metric_tensor_vg(1,1) = csi(1,i,j,k-1)
-      metric_tensor_vg(1,2) = csi(2,i,j,k-1)
-      metric_tensor_vg(1,3) = csi(3,i,j,k-1)
-      metric_tensor_vg(2,1) = eta(1,i,j,k-1)
-      metric_tensor_vg(2,2) = eta(2,i,j,k-1)
-      metric_tensor_vg(2,3) = eta(3,i,j,k-1)
-      metric_tensor_vg(3,1) = zet(1,i,j,k-1)
-      metric_tensor_vg(3,2) = zet(2,i,j,k-1)
-      metric_tensor_vg(3,3) = zet(3,i,j,k-1)
-
-      velocity_gradient = zero
-
-      ! velocity_gradient = ∂u_i/∂ξ^m * ∂ξ^m/∂x_j (Einstein's summation)
-
-      do jvg = 1,3
-      do ivg = 1,3
-      do msum = 1, 3
-
-         velocity_gradient(ivg,jvg) =  velocity_gradient(ivg,jvg) + &
-                                       velocity_curv_gradient(ivg,msum) * &
-                                       metric_tensor_vg(msum,jvg)                                 
-      end do
-      end do
-      end do
-
-      ! velocity update
-
-      q(2,i,j,k) = q(2,i,j,k-1) + exsign * velocity_gradient(1,3) * (z(i,j,k) - z(i,j,k-1))
-      q(3,i,j,k) = q(3,i,j,k-1) + exsign * velocity_gradient(2,3) * (z(i,j,k) - z(i,j,k-1))
-      q(4,i,j,k) = q(4,i,j,k-1) + exsign * velocity_gradient(3,3) * (z(i,j,k) - z(i,j,k-1))
-
-
-   end if
-
-end do
-end do
-end do
-
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -                                                                                                                                          
 !
@@ -401,28 +264,15 @@ do i = i_mysta, i_myend
    ! next to the free-surface
    ! ----------------------------------------------------------------------------
 
-   if ( rsign(i,j,k) < one_half ) then ! Air-phase
-
-      sum_aux = zero
-   
-      do kk = k-1 , k+1
-      do jj = j-1 , j+1
-      do ii = i-1 , i+1
-   
-         sum_aux = sum_aux + rsign(ii,jj,kk)
-   
-      end do
-      end do
-      end do
-
-   if( sum_aux > one_half ) then
+   if( (one - rsign(i,j,k)) * (   rsign(i-1,j,k) + rsign(i+1,j,k)   &
+                                + rsign(i,j-1,k) + rsign(i,j+1,k)   &
+                                + rsign(i,j,k-1) + rsign(i,j,k+1) ) > one_half) then
             
       ! Allocating matrix arrays for SVD solver
 
-      allocate(  t_matrix_system ( 1:mms , 1:nms  ) , &
-                 a_coeff_vector  ( 1:nms )          , &
-                 b_matrix_system ( 1:max(mms,nms) )   &
-               )
+      allocate(t_matrix_system (1:mms,1:nms)      , &
+               a_coeff_vector  (1:nms)            , &
+               b_matrix_system (1:max(mms,nms)))
 
       t_matrix_system = zero
       a_coeff_vector  = zero
@@ -462,7 +312,7 @@ do i = i_mysta, i_myend
 
       call nts_vectors(  phi_work, phi_grad_work,csi_work, eta_work, zet_work, &
                        & dc, de, dz, aj_work, nvec, tvec, svec)
-
+                             
       ! n_j * t_i tensor = nj*ti + ni*tj
       ! where n = normal vector, t = tangential vector 
       !(it's a symetric tensor)
@@ -496,13 +346,17 @@ do i = i_mysta, i_myend
       ! we compute the alpha vector, which is the position 
       ! vector from the free surface to the grid point (i,j,k) 
       !
-      ! alpha = -ϕ * n 
+      ! alpha = ϕ * n 
       ! 
+      ! (phi is negative in the air, and n points towards the water
+      ! phase (the phi gradient points towards the water phase), so it 
+      ! gives that alpha is a vector that comes from the free-surface 
+      ! to the point (i,j,k))
       ! --------------------------------------------------------------
 
-      alpha_vec(1) = -phi(i,j,k) * nvec(1) 
-      alpha_vec(2) = -phi(i,j,k) * nvec(2) 
-      alpha_vec(3) = -phi(i,j,k) * nvec(3) 
+      alpha_vec(1) = phi(i,j,k)*nvec(1) 
+      alpha_vec(2) = phi(i,j,k)*nvec(2) 
+      alpha_vec(3) = phi(i,j,k)*nvec(3) 
 
       ! x_ijk = xs + α --> xs = x_ijk - α
       ! (xs,ys,zs) : position vector at the free-surface
@@ -547,20 +401,16 @@ do i = i_mysta, i_myend
       ! dx = J^(-1/3) = (dV_ijk)^(1/3): a local length scale 
       ! for cell size
 
-      dx = aj(i,j,k)**( -one_third )  
+      dx = (aj(i,j,k))**(-one_third)
 
       ! (inearest, jnearest, knearest) are the nearest location to the free-surface
       ! in the water phase, swept for lsqm. We initialise them at the i,j,k nodes
 
-      inearest = i
-      jnearest = j     
-      knearest = k
-
-      least_dis      = 40.0_rdf ! 20.0: a huge number for initialisation
-      aux_least_dis  = zero             ! flag_variable
-      
+      inearest       = i;     jnearest = j;     knearest = k; 
+      least_dis      = two * ten**(one) ! 20.0: a huge number for initialisation
+      aux_least_dis  = zero ! flag_variable
       velocity_gradient_extp = zero 
-      alpha_vec_extp         = zero
+      alpha_vec_extp = zero
 
       do kk = max( k_mysta , k-sweep_lsqm ), min( k_myend , k+sweep_lsqm )
       do jj = max( j_mysta , j-sweep_lsqm ), min( j_myend , j+sweep_lsqm )
@@ -573,7 +423,7 @@ do i = i_mysta, i_myend
         rdiff(2) = y(ii,jj,kk) - ys  
         rdiff(3) = z(ii,jj,kk) - zs  
 
-        rdiff_norm = norm2( rdiff ) !sqrt(rdiff(1)**2+rdiff(2)**2+rdiff(3)**2)
+        rdiff_norm = sqrt(rdiff(1)**2+rdiff(2)**2+rdiff(3)**2)
 
         ! exsign is a flag variable whose value can be 1 or 0
         ! 
@@ -587,17 +437,17 @@ do i = i_mysta, i_myend
         ! when exsign = 0 (air-phase/outbound range), the local T and B terms
         ! added to the global summation are both zero (not considered for lsqm)
 
-        exsign = rsign(ii,jj,kk) * ( sign( one , radius_lsqm * dx - rdiff_norm ) + one )/two
+        exsign = rsign(ii,jj,kk)*(sign(one,radius_lsqm*dx-rdiff_norm) + one)/two
 
         ! alpha_local is the position vector between xs and the point ii,jj,kk  
 
         ! alpha_vec = (alpha, beta, gamma)^T
         ! a, b, c, d : linear correction-function coefficients
 
-        alpha_local(0) = exsign *  one       ! because it multiplies a_ij coefficient
-        alpha_local(1) = exsign * (rdiff(1)) ! b_ij -> alpha_ii,jj,kk
-        alpha_local(2) = exsign * (rdiff(2)) ! c_ij -> beta_ii,jj,kk
-        alpha_local(3) = exsign * (rdiff(3)) ! d_ij -> gamma_ii,jj,kk
+        alpha_local(0) = exsign * one ! because it multiplies a_ij coefficient
+        alpha_local(1) = exsign * (rdiff(1)) !b_ij->alpha_ii,jj,kk
+        alpha_local(2) = exsign * (rdiff(2)) !c_ij->beta_ii,jj,kk
+        alpha_local(3) = exsign * (rdiff(3)) !d_ij->gamma_ii,jj,kk
 
         !-----------------------------------------------------------------
         ! These two loops (jvs and ivs) construct the Tt and Ts vectors
@@ -667,14 +517,9 @@ do i = i_mysta, i_myend
         ! B-vector construction. It is separated in two loops to enhance
         ! memory-access locality
         !
-        !         /  ∂ui               ∂uj            \
-        ! Bt  =  (  ----- (xs + α) +  ----- (xs + α)   ) * nj * ti         
-        !         \  ∂xj               ∂xi            /
-        !       
-        !         /  ∂ui               ∂uj            \
-        ! Bs  =  (  ----- (xs + α) +  ----- (xs + α)   ) * nj * si         
-        !         \  ∂xj               ∂xi            /
-        !         
+        ! Bt = (∂u_i/∂x_j (xs + α) + ∂u_j/∂x_i (xs + α)) * nj*ti
+        ! Bs = (∂u_i/∂x_j (xs + α) + ∂u_j/∂x_i (xs + α)) * nj*si
+        !
         ! ims, jms : i-matrix system, j-matrix system
         !----------------------------------------------------------------------
 
@@ -881,11 +726,8 @@ do i = i_mysta, i_myend
 
       du_dx_fs_lsqm = zero
 
-      call velocity_gradient_extrapolation_free_surface_lsqm ( a_coeff_vector          , &
-                                                               alpha_vec_extp          , & 
-                                                               velocity_gradient_extp  , &
-                                                               du_dx_fs_lsqm             &
-                                                            )
+      call velocity_gradient_extrapolation_free_surface_lsqm ( a_coeff_vector , alpha_vec_extp, & 
+                                                               velocity_gradient_extp , du_dx_fs_lsqm)
 
       !---------------------------------------------------
       ! Velocity extrapolation to the free-surface
@@ -893,23 +735,16 @@ do i = i_mysta, i_myend
 
       u_fs_lsqm = zero
          
-      call velocity_extrapolation_free_surface_lsqm ( alpha_vec_extp  , &
-                                                      inearest        , & 
-                                                      jnearest        , & 
-                                                      knearest        , &
-                                                      du_dx_fs_lsqm   , & 
-                                                      u_fs_lsqm         &
-                                                    )
+      call velocity_extrapolation_free_surface_lsqm ( alpha_vec_extp , &
+                                                      inearest, jnearest, knearest, &
+                                                      du_dx_fs_lsqm, u_fs_lsqm)
 
       !---------------------------------------------------
       ! ghost-nodes velocity extrapolation
       !---------------------------------------------------
 
-      call ghost_nodes_velocity_extrapolation( i  , j  , k   , &
-                                               xs , ys , zs  , &
-                                               u_fs_lsqm     , &
-                                               du_dx_fs_lsqm   &
-                                             )
+      call ghost_nodes_velocity_extrapolation( i, j, k, xs, ys, zs , &
+                                               u_fs_lsqm, du_dx_fs_lsqm)
 
       !---------------------------------------------------
       ! zero - shear condition error computation
@@ -921,7 +756,6 @@ do i = i_mysta, i_myend
       deallocate( t_matrix_system , a_coeff_vector , b_matrix_system )
 
    end if ! if the node i,j,k is extrapolated
-   end if ! rsign(i,j,k) == 0
 end do ! i
 end do ! j
 end do ! k
@@ -965,12 +799,8 @@ end do ! k
 ! If i,j,k node is next to the free surface then I need to apply the dynamic normal boundary condition at  
 ! the free surface to obtain the pressure at the free-surface and then the flux at i,j,k. Normal vector and  
 ! velocity gradients at the free surface are obtained by linear interpolation.             
-!
-!
-!         2      ∂ui            |    
-! pfs  + ---- * ----- * ni * nj |    = 0 
-!         Re     ∂xj            |fs
-!
+!              
+!     pfs + 2/Re ( ( ∂ui / ∂xj + ∂uj / ∂xi ) * ni * nj ) = 0
 !
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
@@ -979,6 +809,9 @@ pJ = zero
 
 ! I calculate p/J within the water phase
 where ( rsign > one_half ) pJ = q(1,:,:,:) / aj
+
+call outputD3_real(pJ,'pJ000001') 
+
 
 do k = k_mysta, k_myend
 do j = j_mysta, j_myend
@@ -1042,15 +875,6 @@ do i = i_mysta, i_myend
          rh(3,i,j,k) = PressureFluxAux(2)
          rh(4,i,j,k) = PressureFluxAux(3)
 
-
-         if ( i == 9 .and. j==5 .and. k == 28 ) then
-
-            print *, '--------------------------------------------------------------------------------'
-            print *, ' '
-            write(*, '(A, F15.12)') ' PressureFluxAux(3) en ξ = ', PressureFluxAux(3)
-
-         end if
-
       end if
       
       ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -1060,9 +884,9 @@ do i = i_mysta, i_myend
       ! j-1 and j+1 nodes are within the water phase
       if ( rsign(i,j-1,k) > one_half .and. rsign(i,j+1,k) > one_half ) then
 
-         rh(2,i,j,k) = rh(2,i,j,k) + de2 * ( pJ(i,j+1,k) * eta(1,i,j+1,k) - pJ(i,j-1,k) * eta(1,i,j-1,k) )
-         rh(3,i,j,k) = rh(3,i,j,k) + de2 * ( pJ(i,j+1,k) * eta(2,i,j+1,k) - pJ(i,j-1,k) * eta(2,i,j-1,k) )
-         rh(4,i,j,k) = rh(4,i,j,k) + de2 * ( pJ(i,j+1,k) * eta(3,i,j+1,k) - pJ(i,j-1,k) * eta(3,i,j-1,k) )
+         rh(2,i,j,k) = rh(2,i,j,k) + de2 * ( pJ(i,j+1,k)*eta(1,i,j+1,k) - pJ(i,j-1,k)*eta(1,i,j-1,k) )
+         rh(3,i,j,k) = rh(3,i,j,k) + de2 * ( pJ(i,j+1,k)*eta(2,i,j+1,k) - pJ(i,j-1,k)*eta(2,i,j-1,k) )
+         rh(4,i,j,k) = rh(4,i,j,k) + de2 * ( pJ(i,j+1,k)*eta(3,i,j+1,k) - pJ(i,j-1,k)*eta(3,i,j-1,k) )
 
       else
 
@@ -1105,15 +929,6 @@ do i = i_mysta, i_myend
          rh(2,i,j,k) = rh(2,i,j,k) + PressureFluxAux(1)
          rh(3,i,j,k) = rh(3,i,j,k) + PressureFluxAux(2)
          rh(4,i,j,k) = rh(4,i,j,k) + PressureFluxAux(3)
-
-         if ( i == 9 .and. j==5 .and. k == 28 ) then
-
-            print *, '--------------------------------------------------------------------------------'
-            print *, ' '
-            write(*, '(A, F15.12)') ' PressureFluxAux(3) en η = ', PressureFluxAux(3)
-
-         end if
-
 
       end if
 
@@ -1163,23 +978,12 @@ do i = i_mysta, i_myend
                                                     phi_gradient(:,i,j,k+1) , & ! ∇ϕR
                                                     GradVelL                , & ! ∇uL
                                                     GradVelC                , & ! ∇uC
-                                                    GradVelR                , & ! ∇uR
-                                                    ( i == 9 .and. j==5 .and. k == 28 ) &  
+                                                    GradVelR                  & ! ∇uR  
                                                   )
 
          rh(2,i,j,k) = rh(2,i,j,k) + PressureFluxAux(1)
          rh(3,i,j,k) = rh(3,i,j,k) + PressureFluxAux(2)
          rh(4,i,j,k) = rh(4,i,j,k) + PressureFluxAux(3)
-
-         if ( i == 9 .and. j==5 .and. k == 28 ) then
-
-            print *, '--------------------------------------------------------------------------------'
-            print *, ' '
-            write(*, '(A, F15.12)') ' PressureFluxAux(3) en ζ = ', PressureFluxAux(3)
-            write(*, '(A, F15.12)') ' rh(4) = ', rh(4,i,j,k)
-
-         end if
-
 
       end if
 
@@ -1190,21 +994,427 @@ end do
 end do
 
 
-print *, ' '
-print *, 'max error gfm: ' , max(maxval(abs(error_tdir)),maxval(abs(error_sdir)))
-print *, ' '
-
 ! Deallocate big arrays
-deallocate( phi_gradient , least_dis_extp , error_tdir, error_sdir, pJ , rsign_aux )
+deallocate( phi_gradient , least_dis_extp , error_tdir, error_sdir, pJ )
 
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
 
 contains
 
-include 'calc_phi_gradient.F90'
-include 'VelocityGradientTensor.F90'
-include 'PhiGradientVector.F90'
+subroutine calc_phi_gradient
+
+   ! phi gradient at internal points
+   
+   do k = k_mysta, k_myend
+      do j = j_mysta, j_myend
+         do i = i_mysta, i_myend
+     
+            ! central difference for phi curvilinear derivatives
+            dphi_dcsi = dc2 * (phi(i+1,j,k) - phi(i-1,j,k))
+            dphi_deta = de2 * (phi(i,j+1,k) - phi(i,j-1,k))
+            dphi_dzet = dz2 * (phi(i,j,k+1) - phi(i,j,k-1))
+    
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+            
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+   
+         end do
+      end do
+   end do
+   
+   
+   ! phi gradient at the boundaries
+   ! One-sided derivatives at the whole domain borders
+   ! expresions obtained from section 3.7.1 (Implementation of
+   ! Boundary conditions using internal grid points) of Ferziger's
+   ! book
+   
+   i = i_mysta-1
+   
+   !i global = 1
+   if (myback == mpi_proc_null) then
+      do k = k_mysta, k_myend
+         do j = j_mysta, j_myend
+            
+            ! one sided derivative
+            dphi_dcsi = dc2 * (  - one   * phi(i+2,j,k) &
+                               & + four  * phi(i+1,j,k) &
+                               & - three * phi(i  ,j,k) )
+            
+            dphi_deta = de2 * (phi(i,j+1,k) - phi(i,j-1,k))
+            dphi_dzet = dz2 * (phi(i,j,k+1) - phi(i,j,k-1))
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+   
+   else ! my processor is next to another processor at the i1 face and
+        ! I can use ghost points for computing the gradient. It applies
+        ! on every direction
+   
+      do k = k_mysta, k_myend
+         do j = j_mysta, j_myend
+            
+            dphi_dcsi = dc2 * (phi(i+1,j,k) - phi(i-1,j,k))
+            dphi_deta = de2 * (phi(i,j+1,k) - phi(i,j-1,k))
+            dphi_dzet = dz2 * (phi(i,j,k+1) - phi(i,j,k-1))
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+   end if
+   
+   i = i_myend+1
+   
+   !i global = im
+   if (myfront == mpi_proc_null) then
+      i = i_myend+1
+      do k = k_mysta, k_myend
+         do j = j_mysta, j_myend
+            
+            ! one-sided derivative
+            dphi_dcsi = dc2 * (    one   * phi(i-2,j,k) &
+                               & - four  * phi(i-1,j,k) &
+                               & + three * phi(i  ,j,k) )
+            
+            dphi_deta = de2 * (phi(i,j+1,k) - phi(i,j-1,k))
+            dphi_dzet = dz2 * (phi(i,j,k+1) - phi(i,j,k-1))
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+   
+   else
+   
+      do k = k_mysta, k_myend
+         do j = j_mysta, j_myend
+            
+            dphi_dcsi = dc2 * (phi(i+1,j,k) - phi(i-1,j,k))         
+            dphi_deta = de2 * (phi(i,j+1,k) - phi(i,j-1,k))
+            dphi_dzet = dz2 * (phi(i,j,k+1) - phi(i,j,k-1))
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+   
+   end if
+   
+   
+   j = j_mysta-1
+   
+   ! j global  = 1
+   if (myleft == mpi_proc_null) then
+   
+      do k = k_mysta, k_myend
+         do i = i_mysta, i_myend
+            
+            dphi_dcsi = dc2 * (phi(i+1,j,k) - phi(i-1,j,k))
+            
+            ! one sided derivative
+            dphi_deta = de2 * (  - one   * phi(i,j+2,k) &
+                               & + four  * phi(i,j+1,k) &
+                               & - three * phi(i,j  ,k) )
+            
+            dphi_dzet = dz2 * (phi(i,j,k+1) - phi(i,j,k-1))
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+   
+   else
+   
+      do k = k_mysta, k_myend
+         do i = i_mysta, i_myend
+            
+            dphi_dcsi = dc2 * (phi(i+1,j,k) - phi(i-1,j,k))         
+            dphi_deta = de2 * (phi(i,j+1,k) - phi(i,j-1,k))
+            dphi_dzet = dz2 * (phi(i,j,k+1) - phi(i,j,k-1))
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+   
+   end if
+   
+   
+   j = j_myend+1
+   
+   ! j global  = jm
+   if (myright == mpi_proc_null) then   
+   
+      do k = k_mysta, k_myend
+         do i = i_mysta, i_myend
+            
+            dphi_dcsi = dc2 * (phi(i+1,j,k) - phi(i-1,j,k))
+            
+            ! one sided derivative
+            dphi_deta = de2 * (    one   * phi(i,j-2,k) &
+                               & - four  * phi(i,j-1,k) &
+                               & + three * phi(i,j  ,k) )
+            
+            dphi_dzet = dz2 * (phi(i,j,k+1) - phi(i,j,k-1))
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+   
+   else
+   
+      do k = k_mysta, k_myend
+         do i = i_mysta, i_myend
+            
+            dphi_dcsi = dc2 * (phi(i+1,j,k) - phi(i-1,j,k))         
+            dphi_deta = de2 * (phi(i,j+1,k) - phi(i,j-1,k))
+            dphi_dzet = dz2 * (phi(i,j,k+1) - phi(i,j,k-1))
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+   
+   end if
+   
+   k = k_mysta-1
+   
+   ! k global = 1
+   if (mydown == mpi_proc_null) then
+   
+      do j = j_mysta, j_myend
+         do i = i_mysta, i_myend
+            
+            dphi_dcsi = dc2 * (phi(i+1,j,k) - phi(i-1,j,k))
+            dphi_deta = de2 * (phi(i,j+1,k) - phi(i,j-1,k))
+            
+            ! one-sided derivative
+            dphi_dzet = dz2 * ( - one   * phi(i,j,k+2) &
+                              & + four  * phi(i,j,k+1) &
+                              & - three * phi(i,j,k  ) )
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+   
+   else
+   
+      do j = j_mysta, j_myend
+         do i = i_mysta, i_myend
+            
+            dphi_dcsi = dc2 * (phi(i+1,j,k) - phi(i-1,j,k))         
+            dphi_deta = de2 * (phi(i,j+1,k) - phi(i,j-1,k))
+            dphi_dzet = dz2 * (phi(i,j,k+1) - phi(i,j,k-1))
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+   
+   
+   end if
+   
+   k = k_myend+1
+   
+   ! k global = km
+   if (myup == mpi_proc_null) then
+   
+      do j = j_mysta, j_myend
+         do i = i_mysta, i_myend
+            
+            dphi_dcsi = dc2 * (phi(i+1,j,k) - phi(i-1,j,k))
+            dphi_deta = de2 * (phi(i,j+1,k) - phi(i,j-1,k))
+            
+            ! one-sided derivative
+            dphi_dzet = dz2 * (    one   * phi(i,j,k-2) &
+                               & - four  * phi(i,j,k-1) &
+                               & + three * phi(i,j,k  ) )
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+   
+   else
+   
+      do j = j_mysta, j_myend
+         do i = i_mysta, i_myend
+            
+            dphi_dcsi = dc2 * (phi(i+1,j,k) - phi(i-1,j,k))         
+            dphi_deta = de2 * (phi(i,j+1,k) - phi(i,j-1,k))
+            dphi_dzet = dz2 * (phi(i,j,k+1) - phi(i,j,k-1))
+      
+            ! dphi/dx
+            phi_gradient(1,i,j,k) =      dphi_dcsi*csi(1,i,j,k) &
+                                     & + dphi_deta*eta(1,i,j,k) &
+                                     & + dphi_dzet*zet(1,i,j,k) 
+      
+            ! dphi/dy
+            phi_gradient(2,i,j,k) =      dphi_dcsi*csi(2,i,j,k) &
+                                     & + dphi_deta*eta(2,i,j,k) &
+                                     & + dphi_dzet*zet(2,i,j,k) 
+            
+            ! dphi/dz
+            phi_gradient(3,i,j,k) =      dphi_dcsi*csi(3,i,j,k) &
+                                     & + dphi_deta*eta(3,i,j,k) &
+                                     & + dphi_dzet*zet(3,i,j,k) 
+         end do
+      end do
+
+   end if
+
+end subroutine calc_phi_gradient
+
+
 
 
 subroutine nts_vectors(phi, phi_grad, csi, eta, zet, dc, de, dz, aj, nvec, tvec, svec)
@@ -1241,15 +1451,15 @@ subroutine nts_vectors(phi, phi_grad, csi, eta, zet, dc, de, dz, aj, nvec, tvec,
 
    ! normal vector
    
-   phi_gradient_norm = sqrt( phi_grad(1,0,0,0)**two + &
-                             phi_grad(2,0,0,0)**two + &
-                             phi_grad(3,0,0,0)**two      )
+   phi_gradient_norm = sqrt(phi_grad(1,0,0,0)**two + &
+                          & phi_grad(2,0,0,0)**two + &
+                          & phi_grad(3,0,0,0)**two)
    
    nvec = zero
 
-   nvec(1) = -phi_grad(1,0,0,0)/phi_gradient_norm
-   nvec(2) = -phi_grad(2,0,0,0)/phi_gradient_norm
-   nvec(3) = -phi_grad(3,0,0,0)/phi_gradient_norm
+   nvec(1) = phi_grad(1,0,0,0)/phi_gradient_norm
+   nvec(2) = phi_grad(2,0,0,0)/phi_gradient_norm
+   nvec(3) = phi_grad(3,0,0,0)/phi_gradient_norm
    
    ! tangential vectors
    
@@ -2247,498 +2457,7 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
 
 end subroutine velocity_curv_gradient_tensor 
 
-subroutine velocity_curv_gradient_tensor_near_layer(i, j, k, velocity_curv_gradient, exsign)
-   
-   ! compute derivatives of cartesian velocities in curvilinear directions
-   ! It uses adaptative stencils depending on whether the node is within the 
-   ! water phase or not
-   ! velocity_curv_gradient(i,l) = ∂u_i/∂ξ^l
 
-   implicit none
-
-   integer, intent(in) :: i,j,k
-   real (kind = rdf), dimension(1:3,1:3), intent(inout) :: velocity_curv_gradient 
-   
-   ! local variables
-
-   ! rsign_im, rsign_ic and rsign_ip are flag variables to decide which stencil to
-   ! use depending on whether the node is and their neighbors. 
-   ! For the variables:   m = minus/upwind   (i-2,i-1,i or i-1,i stencils)
-   !                      c = central        (i-1,i+1 stencil)
-   !                      p = plus/downwind  (i,i+1,i+2 or i,i+1 stencils).
-   !
-   ! Only one of {rsign_im, rsign_ic,rsign_ip} variables can be 1.0 for a node 
-   ! i,j,k at the same time
-
-   real (kind = rdf) ::   rsign_im, rsign_ic, rsign_ip, &
-                        & rsign_jm, rsign_jc, rsign_jp, &
-                        & rsign_km, rsign_kc, rsign_kp
-
-   ! velocity derivatives for the different used stencils
-
-   real (kind = rdf) ::   du_dcsi_m, du_dcsi_c, du_dcsi_p, &
-                        & du_deta_m, du_deta_c, du_deta_p, &
-                        & du_dzet_m, du_dzet_c, du_dzet_p, &
-                        & dv_dcsi_m, dv_dcsi_c, dv_dcsi_p, &
-                        & dv_deta_m, dv_deta_c, dv_deta_p, &
-                        & dv_dzet_m, dv_dzet_c, dv_dzet_p, &
-                        & dw_dcsi_m, dw_dcsi_c, dw_dcsi_p, &
-                        & dw_deta_m, dw_deta_c, dw_deta_p, &
-                        & dw_dzet_m, dw_dzet_c, dw_dzet_p
-
-   real (kind = rdf), intent(inout) :: exsign ! flag variable. exsign = 0, the gradient is set to zero
-                               !                exsign = 1, the computed gradient is returned
-
-   real (kind = rdf) :: aux_sum ! sum over all the stencil flag variables
-
-   du_dcsi_m = zero; du_dcsi_c = zero; du_dcsi_p = zero;
-   du_deta_m = zero; du_deta_c = zero; du_deta_p = zero;
-   du_dzet_m = zero; du_dzet_c = zero; du_dzet_p = zero;
-   dv_dcsi_m = zero; dv_dcsi_c = zero; dv_dcsi_p = zero;
-   dv_deta_m = zero; dv_deta_c = zero; dv_deta_p = zero;
-   dv_dzet_m = zero; dv_dzet_c = zero; dv_dzet_p = zero;
-   dw_dcsi_m = zero; dw_dcsi_c = zero; dw_dcsi_p = zero;
-   dw_deta_m = zero; dw_deta_c = zero; dw_deta_p = zero;
-   dw_dzet_m = zero; dw_dzet_c = zero; dw_dzet_p = zero;
-
-   ! Only one of {rsign_im, rsign_ic, rsign_ip} can be one for a node i,j,k
-   ! at the same time
-
-   ! rsign_im = 1 --> rsign_ic = rsign_ip = 0 --> upwind scheme is used
-   ! rsign_ic = 1 --> rsign_im = rsign_ip = 0 --> centred scheme is used
-   ! rsign_ip = 1 --> rsign_im = rsign_ic = 0 --> downwind scheme is used
-
-   ! if i-1,i,i+1 = water --> rsign_ic = 1. Otherwise, rsign_ic = 0
-   rsign_ic = rsign_aux(i-1,j,k)   * rsign_aux(i,j,k) * rsign_aux(i+1,j,k)
-   ! if i = water, i-1 = water and rsign_ic = 0 --> rsign_im = 1. Otherwise, rsign_im = 0
-   rsign_im = (one - rsign_ic) * rsign_aux(i,j,k) * rsign_aux(i-1,j,k)
-   ! if i = water, i+1 = water and rsign_ic = 0 --> rsign_ip = 1. Otherwise, rsign_ip = 0
-   rsign_ip = (one - rsign_ic) * rsign_aux(i,j,k) * rsign_aux(i+1,j,k)
-
-   rsign_jc = rsign_aux(i,j-1,k)   * rsign_aux(i,j,k) * rsign_aux(i,j+1,k)
-   rsign_jm = (one - rsign_jc) * rsign_aux(i,j,k) * rsign_aux(i,j-1,k)
-   rsign_jp = (one - rsign_jc) * rsign_aux(i,j,k) * rsign_aux(i,j+1,k)
-
-   rsign_kc = rsign_aux(i,j,k-1)   * rsign_aux(i,j,k) * rsign_aux(i,j,k+1)
-   rsign_km = (one - rsign_kc) * rsign_aux(i,j,k) * rsign_aux(i,j,k-1)
-   rsign_kp = (one - rsign_kc) * rsign_aux(i,j,k) * rsign_aux(i,j,k+1)
-
-   ! if there is any direction where the flag variable is zero, the gradient
-   ! shouldn't be considered for lsqm (the gradient is set to zero and the
-   ! flag variable, exsign, too)
-
-   aux_sum =  rsign_im + rsign_ic + rsign_ip &
-            + rsign_jm + rsign_jc + rsign_jp &
-            + rsign_km + rsign_kc + rsign_kp
-
-   ! if aux_sum<3, exsign = 0
-
-   exsign = one - (sign( one , 2.5_rdf - aux_sum) + one) / two
-
-   if (exsign>0) then ! if exsign = 0, I don't compute any derivative
-   
-      ! - - - - - - - - - - - - - - 
-      ! i - direction
-      ! - - - - - - - - - - - - - - 
-   
-      du_dcsi_c = dc2 * (q(2,i+1,j,k)-q(2,i-1,j,k))
-      dv_dcsi_c = dc2 * (q(3,i+1,j,k)-q(3,i-1,j,k))
-      dw_dcsi_c = dc2 * (q(4,i+1,j,k)-q(4,i-1,j,k))
-   
-      if (i == i_mysta)  then
-   
-         ! if the node is next to the border, the upwind
-         ! scheme is just first - order accurate
-   
-         du_dcsi_m = dc * (q(2,i,j,k) - q(2,i-1,j,k))
-         dv_dcsi_m = dc * (q(3,i,j,k) - q(3,i-1,j,k))
-         dw_dcsi_m = dc * (q(4,i,j,k) - q(4,i-1,j,k))
-   
-         ! downwind scheme
-         du_dcsi_p = dc2 * (  - one   * q(2,i+2,j,k) &
-                            & + four  * q(2,i+1,j,k) &
-                            & - three * q(2,i  ,j,k) )
-   
-         dv_dcsi_p = dc2 * (  - one   * q(3,i+2,j,k) &
-                            & + four  * q(3,i+1,j,k) &
-                            & - three * q(3,i  ,j,k) )
-   
-         dw_dcsi_p = dc2 * (  - one   * q(4,i+2,j,k) &
-                            & + four  * q(4,i+1,j,k) &
-                            & - three * q(4,i  ,j,k) )
-   
-         ! if i+2 node is within the air-phase, the downdind scheme is 
-         ! replaced by a first-order one
-   
-         du_dcsi_p = du_dcsi_p + (one - rsign_aux(i+2,j,k)) * (- du_dcsi_p + dc * (q(2,i+1,j,k)-q(2,i,j,k)))
-         dv_dcsi_p = dv_dcsi_p + (one - rsign_aux(i+2,j,k)) * (- dv_dcsi_p + dc * (q(3,i+1,j,k)-q(3,i,j,k)))
-         dw_dcsi_p = dw_dcsi_p + (one - rsign_aux(i+2,j,k)) * (- dw_dcsi_p + dc * (q(4,i+1,j,k)-q(4,i,j,k)))
-   
-      else if (i == i_myend) then
-   
-         ! upwind scheme
-         du_dcsi_m = dc2 * (    one   * q(2,i-2,j,k) &
-                            & - four  * q(2,i-1,j,k) &
-                            & + three * q(2,i  ,j,k) )
-   
-         dv_dcsi_m = dc2 * (    one   * q(3,i-2,j,k) &
-                            & - four  * q(3,i-1,j,k) &
-                            & + three * q(3,i  ,j,k) )
-   
-         dw_dcsi_m = dc2 * (    one   * q(4,i-2,j,k) &
-                            & - four  * q(4,i-1,j,k) &
-                            & + three * q(4,i  ,j,k) )
-   
-         ! if i-2 node is within the air-phase, the upwind scheme is 
-         ! replaced by a first-order one
-         
-         du_dcsi_m = du_dcsi_m + (one - rsign_aux(i-2,j,k)) * (- du_dcsi_m + dc * (q(2,i,j,k)-q(2,i-1,j,k)))
-         dv_dcsi_m = dv_dcsi_m + (one - rsign_aux(i-2,j,k)) * (- dv_dcsi_m + dc * (q(3,i,j,k)-q(3,i-1,j,k)))
-         dw_dcsi_m = dw_dcsi_m + (one - rsign_aux(i-2,j,k)) * (- dw_dcsi_m + dc * (q(4,i,j,k)-q(4,i-1,j,k)))
-   
-   
-         ! if the node is next to the border, the downwind
-         ! scheme is just first - order accurate
-   
-         du_dcsi_p = dc * (q(2,i+1,j,k) - q(2,i,j,k))
-         dv_dcsi_p = dc * (q(3,i+1,j,k) - q(3,i,j,k))
-         dw_dcsi_p = dc * (q(4,i+1,j,k) - q(4,i,j,k))
-   
-      else
-   
-         ! upwind derivatives
-         du_dcsi_m = dc2 * (    one   * q(2,i-2,j,k) &
-                            & - four  * q(2,i-1,j,k) &
-                            & + three * q(2,i  ,j,k) )
-   
-         dv_dcsi_m = dc2 * (    one   * q(3,i-2,j,k) &
-                            & - four  * q(3,i-1,j,k) &
-                            & + three * q(3,i  ,j,k) )
-   
-         dw_dcsi_m = dc2 * (    one   * q(4,i-2,j,k) &
-                            & - four  * q(4,i-1,j,k) &
-                            & + three * q(4,i  ,j,k) )
-   
-         ! if i-2 node is within the air-phase, the upwind scheme is 
-         ! replaced by a first-order one
-         
-         du_dcsi_m = du_dcsi_m + (one - rsign_aux(i-2,j,k)) * (- du_dcsi_m + dc * (q(2,i,j,k)-q(2,i-1,j,k)))
-         dv_dcsi_m = dv_dcsi_m + (one - rsign_aux(i-2,j,k)) * (- dv_dcsi_m + dc * (q(3,i,j,k)-q(3,i-1,j,k)))
-         dw_dcsi_m = dw_dcsi_m + (one - rsign_aux(i-2,j,k)) * (- dw_dcsi_m + dc * (q(4,i,j,k)-q(4,i-1,j,k)))
-   
-   
-         ! downwind derivatives
-         du_dcsi_p = dc2 * (  - one   * q(2,i+2,j,k) &
-                            & + four  * q(2,i+1,j,k) &
-                            & - three * q(2,i  ,j,k) )
-   
-         dv_dcsi_p = dc2 * (  - one   * q(3,i+2,j,k) &
-                            & + four  * q(3,i+1,j,k) &
-                            & - three * q(3,i  ,j,k) )
-   
-         dw_dcsi_p = dc2 * (  - one   * q(4,i+2,j,k) &
-                            & + four  * q(4,i+1,j,k) &
-                            & - three * q(4,i  ,j,k) )
-   
-         ! if i+2 node is within the air-phase, the downdind scheme is 
-         ! replaced by a first-order one
-   
-         du_dcsi_p = du_dcsi_p + (one - rsign_aux(i+2,j,k)) * (- du_dcsi_p + dc * (q(2,i+1,j,k)-q(2,i,j,k)))
-         dv_dcsi_p = dv_dcsi_p + (one - rsign_aux(i+2,j,k)) * (- dv_dcsi_p + dc * (q(3,i+1,j,k)-q(3,i,j,k)))
-         dw_dcsi_p = dw_dcsi_p + (one - rsign_aux(i+2,j,k)) * (- dw_dcsi_p + dc * (q(4,i+1,j,k)-q(4,i,j,k)))
-   
-      end if
-     
-      ! - - - - - - - - - - - - - - 
-      ! j - direction
-      ! - - - - - - - - - - - - - - 
-   
-      du_deta_c = de2 * (q(2,i,j+1,k)-q(2,i,j-1,k))
-      dv_deta_c = de2 * (q(3,i,j+1,k)-q(3,i,j-1,k))
-      dw_deta_c = de2 * (q(4,i,j+1,k)-q(4,i,j-1,k))
-   
-      if (j == j_mysta)  then
-   
-         ! if the node is next to the border, the upwind
-         ! scheme is just first - order accurate
-   
-         du_deta_m = de * (q(2,i,j,k) - q(2,i,j-1,k))
-         dv_deta_m = de * (q(3,i,j,k) - q(3,i,j-1,k))
-         dw_deta_m = de * (q(4,i,j,k) - q(4,i,j-1,k))
-   
-         ! downwind scheme
-         du_deta_p = de2 * (  - one   * q(2,i,j+2,k) &
-                            & + four  * q(2,i,j+1,k) &
-                            & - three * q(2,i,j  ,k) )
-   
-         dv_deta_p = de2 * (  - one   * q(3,i,j+2,k) &
-                            & + four  * q(3,i,j+1,k) &
-                            & - three * q(3,i,j  ,k) )
-   
-         dw_deta_p = de2 * (  - one   * q(4,i,j+2,k) &
-                            & + four  * q(4,i,j+1,k) &
-                            & - three * q(4,i,j  ,k) )
-   
-         ! if j+2 node is within the air-phase, the downdind scheme is 
-         ! replaced by a first-order one
-   
-         du_deta_p = du_deta_p + (one - rsign_aux(i,j+2,k)) * (- du_deta_p + de * (q(2,i,j+1,k)-q(2,i,j,k)))
-         dv_deta_p = dv_deta_p + (one - rsign_aux(i,j+2,k)) * (- dv_deta_p + de * (q(3,i,j+1,k)-q(3,i,j,k)))
-         dw_deta_p = dw_deta_p + (one - rsign_aux(i,j+2,k)) * (- dw_deta_p + de * (q(4,i,j+1,k)-q(4,i,j,k)))
-   
-   
-      else if (j == j_myend) then
-   
-         ! upwind scheme
-         du_deta_m = dc2 * (    one   * q(2,i,j-2,k) &
-                            & - four  * q(2,i,j-1,k) &
-                            & + three * q(2,i,j  ,k) )
-   
-         dv_deta_m = dc2 * (    one   * q(3,i,j-2,k) &
-                            & - four  * q(3,i,j-1,k) &
-                            & + three * q(3,i,j  ,k) )
-   
-         dw_deta_m = dc2 * (    one   * q(4,i,j-2,k) &
-                            & - four  * q(4,i,j-1,k) &
-                            & + three * q(4,i,j  ,k) )
-   
-         ! if j-2 node is within the air-phase, the upwind scheme is 
-         ! replaced by a first-order one
-         
-         du_deta_m = du_deta_m + (one - rsign_aux(i,j-2,k)) * (- du_deta_m + de * (q(2,i,j,k)-q(2,i,j-1,k)))
-         dv_deta_m = dv_deta_m + (one - rsign_aux(i,j-2,k)) * (- dv_deta_m + de * (q(3,i,j,k)-q(3,i,j-1,k)))
-         dw_deta_m = dw_deta_m + (one - rsign_aux(i,j-2,k)) * (- dw_deta_m + de * (q(4,i,j,k)-q(4,i,j-1,k)))
-   
-         ! if the node is next to the border, the downwind
-         ! scheme is just first - order accurate
-   
-         du_deta_p = de * (q(2,i,j+1,k) - q(2,i,j,k))
-         dv_deta_p = de * (q(3,i,j+1,k) - q(3,i,j,k))
-         dw_deta_p = de * (q(4,i,j+1,k) - q(4,i,j,k))
-   
-      else
-   
-         ! upwind derivatives
-         du_deta_m = dc2 * (    one   * q(2,i,j-2,k) &
-                            & - four  * q(2,i,j-1,k) &
-                            & + three * q(2,i,j  ,k) )
-   
-         dv_deta_m = dc2 * (    one   * q(3,i,j-2,k) &
-                            & - four  * q(3,i,j-1,k) &
-                            & + three * q(3,i,j  ,k) )
-   
-         dw_deta_m = dc2 * (    one   * q(4,i,j-2,k) &
-                            & - four  * q(4,i,j-1,k) &
-                            & + three * q(4,i,j  ,k) )
-   
-         ! if j-2 node is within the air-phase, the upwind scheme is 
-         ! replaced by a first-order one
-         
-         du_deta_m = du_deta_m + (one - rsign_aux(i,j-2,k)) * (- du_deta_m + de * (q(2,i,j,k)-q(2,i,j-1,k)))
-         dv_deta_m = dv_deta_m + (one - rsign_aux(i,j-2,k)) * (- dv_deta_m + de * (q(3,i,j,k)-q(3,i,j-1,k)))
-         dw_deta_m = dw_deta_m + (one - rsign_aux(i,j-2,k)) * (- dw_deta_m + de * (q(4,i,j,k)-q(4,i,j-1,k)))
-   
-   
-         ! downwind derivatives
-         du_deta_p = de2 * (  - one   * q(2,i,j+2,k) &
-                            & + four  * q(2,i,j+1,k) &
-                            & - three * q(2,i,j  ,k) )
-   
-         dv_deta_p = de2 * (  - one   * q(3,i,j+2,k) &
-                            & + four  * q(3,i,j+1,k) &
-                            & - three * q(3,i,j  ,k) )
-   
-         dw_deta_p = de2 * (  - one   * q(4,i,j+2,k) &
-                            & + four  * q(4,i,j+1,k) &
-                            & - three * q(4,i,j  ,k) )
-   
-         ! if j+2 node is within the air-phase, the downdind scheme is 
-         ! replaced by a first-order one
-   
-         du_deta_p = du_deta_p + (one - rsign_aux(i,j+2,k)) * (- du_deta_p + de * (q(2,i,j+1,k)-q(2,i,j,k)))
-         dv_deta_p = dv_deta_p + (one - rsign_aux(i,j+2,k)) * (- dv_deta_p + de * (q(3,i,j+1,k)-q(3,i,j,k)))
-         dw_deta_p = dw_deta_p + (one - rsign_aux(i,j+2,k)) * (- dw_deta_p + de * (q(4,i,j+1,k)-q(4,i,j,k)))
-   
-      end if
-     
-      ! - - - - - - - - - - - - - - 
-      ! k - direction
-      ! - - - - - - - - - - - - - - 
-   
-      du_dzet_c = de2 * (q(2,i,j,k+1)-q(2,i,j,k-1))
-      dv_dzet_c = de2 * (q(3,i,j,k+1)-q(3,i,j,k-1))
-      dw_dzet_c = de2 * (q(4,i,j,k+1)-q(4,i,j,k-1))
-   
-      if (k == k_mysta)  then
-   
-         ! if the node is next to the border, the upwind
-         ! scheme is just first - order accurate
-   
-         du_dzet_m = dz * (q(2,i,j,k) - q(2,i,j,k-1))
-         dv_dzet_m = dz * (q(3,i,j,k) - q(3,i,j,k-1))
-         dw_dzet_m = dz * (q(4,i,j,k) - q(4,i,j,k-1))
-   
-         ! downwind
-         du_dzet_p = dz2 * (  - one   * q(2,i,j,k+2) &
-                            & + four  * q(2,i,j,k+1) &
-                            & - three * q(2,i,j,k  ) )
-   
-         dv_dzet_p = dz2 * (  - one   * q(3,i,j,k+2) &
-                            & + four  * q(3,i,j,k+1) &
-                            & - three * q(3,i,j,k  ) )
-   
-         dw_dzet_p = dz2 * (  - one   * q(4,i,j,k+2) &
-                            & + four  * q(4,i,j,k+1) &
-                            & - three * q(4,i,j,k  ) )
-   
-         ! if k+2 node is within the air-phase, the downdind scheme is 
-         ! replaced by a first-order one
-   
-         du_dzet_p = du_dzet_p + (one - rsign_aux(i,j,k+2)) * (- du_dzet_p + dz * (q(2,i,j,k+1)-q(2,i,j,k)))
-         dv_dzet_p = dv_dzet_p + (one - rsign_aux(i,j,k+2)) * (- dv_dzet_p + dz * (q(3,i,j,k+1)-q(3,i,j,k)))
-         dw_dzet_p = dw_dzet_p + (one - rsign_aux(i,j,k+2)) * (- dw_dzet_p + dz * (q(4,i,j,k+1)-q(4,i,j,k)))
-   
-   
-      else if (k == k_myend) then
-   
-         ! upwind scheme
-         du_dzet_m = dz2 * (    one   * q(2,i,j,k-2) &
-                            & - four  * q(2,i,j,k-1) &
-                            & + three * q(2,i,j,k  ) )
-   
-         dv_dzet_m = dz2 * (    one   * q(3,i,j,k-2) &
-                            & - four  * q(3,i,j,k-1) &
-                            & + three * q(3,i,j,k  ) )
-   
-         dw_dzet_m = dz2 * (    one   * q(4,i,j,k-2) &
-                            & - four  * q(4,i,j,k-1) &
-                            & + three * q(4,i,j,k  ) )
-   
-         ! if k-2 node is within the air-phase, the upwind scheme is 
-         ! replaced by a first-order one
-         
-         du_dzet_m = du_dzet_m + (one - rsign_aux(i,j,k-2)) * (- du_dzet_m + dz * (q(2,i,j,k)-q(2,i,j,k-1)))
-         dv_dzet_m = dv_dzet_m + (one - rsign_aux(i,j,k-2)) * (- dv_dzet_m + dz * (q(3,i,j,k)-q(3,i,j,k-1)))
-         dw_dzet_m = dw_dzet_m + (one - rsign_aux(i,j,k-2)) * (- dw_dzet_m + dz * (q(4,i,j,k)-q(4,i,j,k-1)))
-   
-         ! if the node is next to the border, the downwind
-         ! scheme is just first - order accurate
-   
-         du_dzet_p = dz * (q(2,i,j,k+1) - q(2,i,j,k))
-         dv_dzet_p = dz * (q(3,i,j,k+1) - q(3,i,j,k))
-         dw_dzet_p = dz * (q(4,i,j,k+1) - q(4,i,j,k))
-   
-      else
-   
-         ! upwind derivatives
-         du_dzet_m = dz2 * (    one   * q(2,i,j,k-2) &
-                            & - four  * q(2,i,j,k-1) &
-                            & + three * q(2,i,j,k  ) )
-   
-         dv_dzet_m = dz2 * (    one   * q(3,i,j,k-2) &
-                            & - four  * q(3,i,j,k-1) &
-                            & + three * q(3,i,j,k  ) )
-   
-         dw_dzet_m = dz2 * (    one   * q(4,i,j,k-2) &
-                            & - four  * q(4,i,j,k-1) &
-                            & + three * q(4,i,j,k  ) )
-   
-         ! if k-2 node is within the air-phase, the upwind scheme is 
-         ! replaced by a first-order one
-         
-         du_dzet_m = du_dzet_m + (one - rsign_aux(i,j,k-2)) * (- du_dzet_m + dz * (q(2,i,j,k)-q(2,i,j,k-1)))
-         dv_dzet_m = dv_dzet_m + (one - rsign_aux(i,j,k-2)) * (- dv_dzet_m + dz * (q(3,i,j,k)-q(3,i,j,k-1)))
-         dw_dzet_m = dw_dzet_m + (one - rsign_aux(i,j,k-2)) * (- dw_dzet_m + dz * (q(4,i,j,k)-q(4,i,j,k-1)))
-   
-         ! downwind derivatives
-         du_dzet_p = dz2 * (  - one   * q(2,i,j,k+2) &
-                            & + four  * q(2,i,j,k+1) &
-                            & - three * q(2,i,j,k  ) )
-   
-         dv_dzet_p = dz2 * (  - one   * q(3,i,j,k+2) &
-                            & + four  * q(3,i,j,k+1) &
-                            & - three * q(3,i,j,k  ) )
-   
-         dw_dzet_p = dz2 * (  - one   * q(4,i,j,k+2) &
-                            & + four  * q(4,i,j,k+1) &
-                            & - three * q(4,i,j,k  ) )
-   
-         ! if k+2 node is within the air-phase, the downdind scheme is 
-         ! replaced by a first-order one
-   
-         du_dzet_p = du_dzet_p + (one - rsign_aux(i,j,k+2)) * (- du_dzet_p + dz * (q(2,i,j,k+1)-q(2,i,j,k)))
-         dv_dzet_p = dv_dzet_p + (one - rsign_aux(i,j,k+2)) * (- dv_dzet_p + dz * (q(3,i,j,k+1)-q(3,i,j,k)))
-         dw_dzet_p = dw_dzet_p + (one - rsign_aux(i,j,k+2)) * (- dw_dzet_p + dz * (q(4,i,j,k+1)-q(4,i,j,k)))
-   
-      end if
-
-      ! - - - - - - - - - - - - - - 
-      ! GRADIENT COMPUTATION
-      ! - - - - - - - - - - - - - - 
-   
-      ! - - - - - - - - - - - - - - 
-      ! u - derivatives
-      ! - - - - - - - - - - - - - - 
-   
-      ! ∂u/∂ξ
-      velocity_curv_gradient(1,1) = rsign_im * du_dcsi_m + &
-                                    rsign_ic * du_dcsi_c + &
-                                    rsign_ip * du_dcsi_p
-   
-      ! ∂u/∂η
-      velocity_curv_gradient(1,2) = rsign_jm * du_deta_m + &
-                                    rsign_jc * du_deta_c + &
-                                    rsign_jp * du_deta_p
-   
-      ! ∂u/∂ζ
-      velocity_curv_gradient(1,3) = rsign_km * du_dzet_m + &
-                                    rsign_kc * du_dzet_c + &
-                                    rsign_kp * du_dzet_p
-      ! - - - - - - - - - - - - - - 
-      ! v - derivatives
-      ! - - - - - - - - - - - - - - 
-   
-      ! ∂v/∂ξ
-      velocity_curv_gradient(2,1) = rsign_im * dv_dcsi_m + &
-                                    rsign_ic * dv_dcsi_c + &
-                                    rsign_ip * dv_dcsi_p
-   
-      ! ∂v/∂η
-      velocity_curv_gradient(2,2) = rsign_jm * dv_deta_m + &
-                                    rsign_jc * dv_deta_c + &
-                                    rsign_jp * dv_deta_p
-   
-      ! ∂v/∂ζ
-      velocity_curv_gradient(2,3) = rsign_km * dv_dzet_m + &
-                                    rsign_kc * dv_dzet_c + &
-                                    rsign_kp * dv_dzet_p
-      ! - - - - - - - - - - - - - - 
-      ! w - derivatives
-      ! - - - - - - - - - - - - - - 
-   
-      ! ∂w/∂ξ
-      velocity_curv_gradient(3,1) = rsign_im * dw_dcsi_m + &
-                                    rsign_ic * dw_dcsi_c + &
-                                    rsign_ip * dw_dcsi_p
-   
-      ! ∂w/∂η
-      velocity_curv_gradient(3,2) = rsign_jm * dw_deta_m + &
-                                    rsign_jc * dw_deta_c + &
-                                    rsign_jp * dw_deta_p
-   
-      ! ∂w/∂ζ
-      velocity_curv_gradient(3,3) = rsign_km * dw_dzet_m + &
-                                    rsign_kc * dw_dzet_c + &
-                                    rsign_kp * dw_dzet_p
-   
-   end if ! (if exsign > 0)
-
-   ! if there is a direction where the flag variable is zero, the gradient
-   ! is not considered for lsqm (the gradient is set to zero by setting exsign to zero)
-
-   velocity_curv_gradient = exsign * velocity_curv_gradient
-
-end subroutine velocity_curv_gradient_tensor_near_layer
 
 
 subroutine velocity_gradient_extrapolation_free_surface_lsqm(a_coeff_vector, alpha_vec, & 
@@ -2896,18 +2615,14 @@ subroutine ghost_nodes_velocity_extrapolation(i,j,k, xs, ys, zs, u_fs_lsqm, du_d
    ! the velocity to the air nodes at the boundaries of the domain. This is gonna be useful to
    ! compute velocity gradients in the air phase for the normal boundary condition.
 
-   !do kk = max( k_mysta , k-extp_swept ) , min( k_myend , k+extp_swept ) 
-   !do jj = max( j_mysta , j-extp_swept ) , min( j_myend , j+extp_swept )
-   !do ii = max( i_mysta , i-extp_swept ) , min( i_myend , i+extp_swept )
-
-   do kk = max( kl , k-extp_swept ) , min( ku , k+extp_swept ) 
-   do jj = max( jl , j-extp_swept ) , min( ju , j+extp_swept )
-   do ii = max( il , i-extp_swept ) , min( iu , i+extp_swept )
+   do kk = max( k_mysta-1 , k-extp_swept ) , min( k_myend+1 , k+extp_swept ) 
+   do jj = max( j_mysta-1 , j-extp_swept ) , min( j_myend+1 , j+extp_swept )
+   do ii = max( i_mysta-1 , i-extp_swept ) , min( i_myend+1 , i+extp_swept )
 
       ! if the (ii,jj,kk) is in the air-phase, it's extrapolated using
       ! a Taylor expansion
       
-      if ( rsign(ii,jj,kk) < one_half ) then ! (air-phase)
+      if (rsign(ii,jj,kk) < one_half) then ! (air-phase)
 
          ! position vector from the free-surface to the extrapolated node 
 
@@ -2919,7 +2634,7 @@ subroutine ghost_nodes_velocity_extrapolation(i,j,k, xs, ys, zs, u_fs_lsqm, du_d
 
          ! distance between the extrapolation candidate (ii,jj,kk) node and the
          ! free - surface
-         rdiff_norm = norm2( alpha_local )
+         rdiff_norm = sqrt(alpha_local(1)**2 + alpha_local(2)**2 + alpha_local(3)**2)
 
          ! exsign: flag variable
          !
@@ -2942,6 +2657,7 @@ subroutine ghost_nodes_velocity_extrapolation(i,j,k, xs, ys, zs, u_fs_lsqm, du_d
                                  du_dx_fs_lsqm(1,2)*alpha_local(2) + & 
                                  du_dx_fs_lsqm(1,3)*alpha_local(3)
 
+
          vextp = u_fs_lsqm(2) +  du_dx_fs_lsqm(2,1)*alpha_local(1) + & 
                                  du_dx_fs_lsqm(2,2)*alpha_local(2) + & 
                                  du_dx_fs_lsqm(2,3)*alpha_local(3)
@@ -2953,14 +2669,10 @@ subroutine ghost_nodes_velocity_extrapolation(i,j,k, xs, ys, zs, u_fs_lsqm, du_d
          ! if exsign = 1 (least distanced node), the velocity at ii,jj,kk
          ! is replaced by the extrapolated one
 
-         if ( exsign > one_half ) then
-      
-            q(2,ii,jj,kk) = q(2,ii,jj,kk) + exsign * (-q(2,ii,jj,kk) + uextp)
-            q(3,ii,jj,kk) = q(3,ii,jj,kk) + exsign * (-q(3,ii,jj,kk) + vextp)
-            q(4,ii,jj,kk) = q(4,ii,jj,kk) + exsign * (-q(4,ii,jj,kk) + wextp)
+         q(2,ii,jj,kk) = q(2,ii,jj,kk) + exsign * (-q(2,ii,jj,kk) + uextp)
+         q(3,ii,jj,kk) = q(3,ii,jj,kk) + exsign * (-q(3,ii,jj,kk) + vextp)
+         q(4,ii,jj,kk) = q(4,ii,jj,kk) + exsign * (-q(4,ii,jj,kk) + wextp)
 
-         end if
-      
       end if
 
    end do
@@ -2968,6 +2680,8 @@ subroutine ghost_nodes_velocity_extrapolation(i,j,k, xs, ys, zs, u_fs_lsqm, du_d
    end do
 
 end subroutine ghost_nodes_velocity_extrapolation
+
+
 
 
 subroutine error_gfm(i, j, k, nvec, tvec, svec, du_dx_fs_lsqm)
@@ -3009,8 +2723,7 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
                                    dcsi                            , & 
                                    phiL     , phiC     , phiR      , & 
                                    GradPhiL , GradPhiC , GradPhiR  , &  
-                                   GradVelL , GradVelC , GradVelR  , &
-                                   PrintResults                      &
+                                   GradVelL , GradVelC , GradVelR    & 
                                  )
 
    ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -3053,17 +2766,11 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
    !  b = ( ΔξR^2 - ΔξL^2 ) / (ΔξR * ΔξL * ( ΔξL + ΔξR ) )
    !  c = (         ΔξL^2 ) / (ΔξR * ΔξL * ( ΔξL + ΔξR ) )
    !
-   ! As fL or fR may lie on the free surface, the pressure needs to be computed using the normal 
+   ! As fL or fR may rely on the free surface, the pressure needs to be computed using the normal 
    ! dynamic boundary condition (NDBC) in non-dimensional form
    ! 
-   !
-   !
-   !         2      ∂ui            |    
-   ! pfs  + ---- * ----- * ni * nj |    = 0 
-   !         Re     ∂xj            |fs
-   !
-   !
-   !
+   !           p_fs + 2/Re (∂ui / ∂xj * ni * nj )_fs = 0
+   ! 
    ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
    ! Input variables
@@ -3074,7 +2781,6 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
    real ( kind = rdf ), intent(in) :: phiL , phiC, phiR ! ϕ
    real ( kind = rdf ), dimension(3)   , intent(in) :: GradPhiL , GradPhiC , GradPhiR ! ∇ϕ
    real ( kind = rdf ), dimension(3,3) , intent(in) :: GradVelL , GradVelC , GradVelR ! ∇u
-   logical, optional :: PrintResults
 
    ! Local variables
 
@@ -3085,7 +2791,6 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
    real ( kind = rdf ), dimension(3) :: fL, fC, fR ! p/J * ∂ξ/∂xj
    real ( kind = rdf ) :: InterpCoeff ! Interpolation coefficient (0 < InterpCoeff < 1)
    real ( kind = rdf ) :: dcsiL , dcsiR
-   real ( kind = rdf ) :: tol
 
    ! Variables at the free surface
 
@@ -3100,10 +2805,6 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
    real ( kind = rdf ), dimension(3) :: PressureLinearFlux_NDBC ! ∂/∂ξ (p/J * ∂ξ/∂xj)
 
    ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
-
-   ! Set the tolerance
-
-   tol = ten**(-eight)
 
    ! Metrics ∂ξ/∂x, ∂ξ/∂y & ∂ξ/∂z at L,C & R nodes
 
@@ -3140,8 +2841,7 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
    fC(3) = pC / JC * dcsi_dz_C 
    fR(3) = pR / JR * dcsi_dz_R 
 
-!   if( phiL < -eps_sims ) then
-   if( phiL < zero ) then
+   if( phiL < -eps_sims ) then
    
       ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       !  LEFT NODE WITHIN THE AIR PHASE                     
@@ -3160,7 +2860,6 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
       ! Free surface approaches node L ==>  InterpCoeff --> 1
 
       InterpCoeff = abs( phiC / ( phiC - phiL + eps_sims ) )
-      !InterpCoeff = abs( phiC / abs( phiC - phiL ) )
 
       ! I modify dcsiL interpolating Δξ to the free surface
       dcsiL = InterpCoeff * dcsi 
@@ -3177,9 +2876,8 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
       GradPhi_fs  = InterpCoeff * GradPhiL  + ( one - InterpCoeff ) * GradPhiC 
       GradVel_fs  = InterpCoeff * GradVelL  + ( one - InterpCoeff ) * GradVelC 
 
-      ! unitary normal vector at the free surface n = -∇ϕ / |∇ϕ|
-      !nvec_fs = -GradPhi_fs / ( norm2( GradPhi_fs ) + eps_sims )
-      nvec_fs = -GradPhi_fs / ( norm2( GradPhi_fs ) )
+      ! unitary normal vector at the free surface n = ∇ϕ / |∇ϕ|
+      nvec_fs = GradPhi_fs / ( norm2( GradPhi_fs ) + eps_sims )
 
       ! Computation of ∂ui/∂xj * ni * nj
 
@@ -3194,8 +2892,7 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
       end do
 
       ! Normal Dynamic Boundary Condition p_fs = -2/Re * ( ∂ui / ∂xj * ni * nj )_fs
-      !pfs = -two / ren * dui_dxj_ni_nj
-      pfs = zero
+      pfs = -two / ren * dui_dxj_ni_nj
 
       ! Update of fL using the values at the free surface
       fL(1) = pfs / J_fs * dcsi_dx_fs 
@@ -3205,8 +2902,7 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
    end if
 
 
-!   if ( phiR < -eps_sims ) then
-   if ( phiR < zero ) then
+   if ( phiR < -eps_sims ) then
 
       ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
       !  RIGHT NODE WITHIN THE AIR PHASE                     
@@ -3225,7 +2921,6 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
       ! Free surface approaches node R ==>  InterpCoeff --> 1
 
       InterpCoeff = abs( phiC / ( phiC - phiR + eps_sims ) )
-      !InterpCoeff = abs( phiC / ( phiC - phiR ) )
 
       ! I modify dcsiR interpolating Δξ to the free surface
       dcsiR = InterpCoeff * dcsi 
@@ -3242,8 +2937,8 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
       GradPhi_fs  = InterpCoeff * GradPhiR  + ( one - InterpCoeff ) * GradPhiC 
       GradVel_fs  = InterpCoeff * GradVelR  + ( one - InterpCoeff ) * GradVelC 
 
-      ! unitary normal vector at the free surface n = -∇ϕ / |∇ϕ|
-      nvec_fs = -GradPhi_fs / norm2( GradPhi_fs )
+      ! unitary normal vector at the free surface n = ∇ϕ / |∇ϕ|
+      nvec_fs = GradPhi_fs / ( norm2( GradPhi_fs ) + eps_sims )
 
       ! Computation of ∂ui/∂xj * ni * nj
 
@@ -3258,8 +2953,7 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
       end do
 
       ! Normal Dynamic Boundary Condition p_fs = -2/Re * ( ∂ui / ∂xj * ni * nj )_fs
-      !pfs = -two / ren * dui_dxj_ni_nj
-      pfs = zero
+      pfs = -two / ren * dui_dxj_ni_nj
 
       ! Update of fR using the values at the free surface
       fR(1) = pfs / J_fs * dcsi_dx_fs 
@@ -3269,71 +2963,226 @@ function PressureLinearFlux_NDBC(  pL       , pC       , pR        , &
    end if
 
    ! Stencil coefficients for ∂f/∂ξ = a * fL + b * fC + c * fR (Ferziger)
+   a =  -dcsiR**2             / ( dcsiR * dcsiL * ( dcsiR + dcsiL ) )  
+   b = ( dcsiR**2 - dcsiL**2) / ( dcsiR * dcsiL * ( dcsiR + dcsiL ) )  
+   c =   dcsiL**2             / ( dcsiR * dcsiL * ( dcsiR + dcsiL ) )  
+
+   ! Finally, I compute PressureLinearFlux_NDBC = ∂f/∂ξ 
+   PressureLinearFlux_NDBC = a * fL + b * fC + c * fR
+
+end function PressureLinearFlux_NDBC
+
+
+
+
+subroutine VelocityGradientTensor( i , j , k , VelocityGradient )
+
+   ! Input and output variables
+   integer, intent(in) :: i,j,k
+   real ( kind = rdf ), dimension(3,3), intent(out) :: VelocityGradient
+
+   ! Local variables
+   real ( kind = rdf ), dimension(3,3) :: VelocityCurvilinearGradient, MetricsTensor
+   integer :: m,l,p
+
+   VelocityGradient            = zero
+   VelocityCurvilinearGradient = zero
+   MetricsTensor               = zero
+
+   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -                                                        
+   !                                _                    _                                          
+   !                               | ∂u/∂ξ  ∂u/∂η  ∂u/∂ζ  |  
+   ! VelocityCurvilinearGradient = | ∂v/∂ξ  ∂v/∂η  ∂v/∂ζ  |                               
+   !                               | ∂w/∂ξ  ∂w/∂η  ∂w/∂ζ  |  
+   !                                •-                   -• 
+   ! We calculate the derivatives using a second order centred
+   ! difference scheme. If the stencil is bounded, then a second
+   ! order biased derivative is applied.
+   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -                                                        
    
-   ! I think there's a typo error with this coefficients, as a should go with
-   ! dcsiL instead of dcsiR
-   !a =   -dcsiR**2              / ( dcsiR * dcsiL * ( dcsiR + dcsiL ) )  
-   !b = (  dcsiR**2 - dcsiL**2 ) / ( dcsiR * dcsiL * ( dcsiR + dcsiL ) )  
-   !c =    dcsiL**2              / ( dcsiR * dcsiL * ( dcsiR + dcsiL ) )  
+   ! - - - - - - - - - - - - - - 
+   ! ξ - DIRECTION
+   ! - - - - - - - - - - - - - - 
 
+   if ( myback == mpi_proc_null .and. i == il ) then
 
-   if ( tol * dcsiR > dcsiL ) then
+      ! ∂u/∂ξ
+      VelocityCurvilinearGradient(1,1)   =  dc2 * (  - one   * q(2,i+2,j,k) &
+                                                     + four  * q(2,i+1,j,k) &
+                                                     - three * q(2,i  ,j,k) )
 
-      PressureLinearFlux_NDBC = (fR - fC) / dcsi
+      ! ∂v/∂ξ
+      VelocityCurvilinearGradient(2,1)   =  dc2 * (  - one   * q(3,i+2,j,k) &
+                                                     + four  * q(3,i+1,j,k) &
+                                                     - three * q(3,i  ,j,k) )
 
-   else if ( tol * dcsiL > dcsiR ) then
+      ! ∂w/∂ξ
+      VelocityCurvilinearGradient(3,1)   =  dc2 * (  - one   * q(4,i+2,j,k) &
+                                                     + four  * q(4,i+1,j,k) &
+                                                     - three * q(4,i  ,j,k) )
 
-      PressureLinearFlux_NDBC = (fC - fL) / dcsi
+   else if ( myfront == mpi_proc_null .and. i == iu) then
+
+      ! ∂u/∂ξ
+      VelocityCurvilinearGradient(1,1)   =  dc2 * (    one   * q(2,i-2,j,k) &
+                                                     - four  * q(2,i-1,j,k) &
+                                                     + three * q(2,i  ,j,k) )
+
+      ! ∂v/∂ξ
+      VelocityCurvilinearGradient(2,1)   =  dc2 * (    one   * q(3,i-2,j,k) &
+                                                     - four  * q(3,i-1,j,k) &
+                                                     + three * q(3,i  ,j,k) )
+
+      ! ∂w/∂ξ
+      VelocityCurvilinearGradient(3,1)   =  dc2 * (    one   * q(4,i-2,j,k) &
+                                                     - four  * q(4,i-1,j,k) &
+                                                     + three * q(4,i  ,j,k) )
 
    else
 
-      a =   -dcsiR**2              / ( dcsiR * dcsiL * ( dcsiR + dcsiL ) )  
-      b = (  dcsiR**2 - dcsiL**2 ) / ( dcsiR * dcsiL * ( dcsiR + dcsiL ) )  
-      c =    dcsiL**2              / ( dcsiR * dcsiL * ( dcsiR + dcsiL ) )  
+      ! ∂u/∂ξ
+      VelocityCurvilinearGradient(1,1) = dc2 * ( q(2,i+1,j,k) - q(2,i-1,j,k) )
+      ! ∂v/∂ξ
+      VelocityCurvilinearGradient(2,1) = dc2 * ( q(3,i+1,j,k) - q(3,i-1,j,k) )
+      ! ∂w/∂ξ
+      VelocityCurvilinearGradient(3,1) = dc2 * ( q(4,i+1,j,k) - q(4,i-1,j,k) )
 
-      ! Finally, I compute PressureLinearFlux_NDBC = ∂f/∂ξ 
-      PressureLinearFlux_NDBC = (a * fL) + (b * fC) + (c * fR)
+   end if
+   
+   ! - - - - - - - - - - - - - - 
+   ! η - DIRECTION
+   ! - - - - - - - - - - - - - - 
+
+   if ( myleft == mpi_proc_null .and. j == jl ) then
+
+      ! ∂u/∂η
+      VelocityCurvilinearGradient(1,2)   =  de2 * (  - one   * q(2,i,j+2,k) &
+                                                     + four  * q(2,i,j+1,k) &
+                                                     - three * q(2,i,j  ,k) )
+
+      ! ∂v/∂η
+      VelocityCurvilinearGradient(2,2)   =  de2 * (  - one   * q(3,i,j+2,k) &
+                                                     + four  * q(3,i,j+1,k) &
+                                                     - three * q(3,i,j  ,k) )
+
+      ! ∂w/∂η
+      VelocityCurvilinearGradient(3,2)   =  de2 * (  - one   * q(4,i,j+2,k) &
+                                                     + four  * q(4,i,j+1,k) &
+                                                     - three * q(4,i,j  ,k) )
+
+   else if ( myright == mpi_proc_null .and. j == ju) then
+
+      ! ∂u/∂η
+      VelocityCurvilinearGradient(1,2)   =  de2 * (    one   * q(2,i,j-2,k) &
+                                                     - four  * q(2,i,j-1,k) &
+                                                     + three * q(2,i,j  ,k) )
+
+      ! ∂v/∂η
+      VelocityCurvilinearGradient(2,2)   =  de2 * (    one   * q(3,i,j-2,k) &
+                                                     - four  * q(3,i,j-1,k) &
+                                                     + three * q(3,i,j  ,k) )
+
+      ! ∂w/∂η
+      VelocityCurvilinearGradient(3,2)   =  de2 * (    one   * q(4,i,j-2,k) &
+                                                     - four  * q(4,i,j-1,k) &
+                                                     + three * q(4,i,j  ,k) )
+
+   else
+
+      ! ∂u/∂η
+      VelocityCurvilinearGradient(1,2) = de2 * ( q(2,i,j+1,k) - q(2,i,j-1,k) )
+      ! ∂v/∂η
+      VelocityCurvilinearGradient(2,2) = de2 * ( q(3,i,j+1,k) - q(3,i,j-1,k) )
+      ! ∂w/∂η
+      VelocityCurvilinearGradient(3,2) = de2 * ( q(4,i,j+1,k) - q(4,i,j-1,k) )
 
    end if
 
 
-   !DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
-   if ( present ( PrintResults ) ) then
+   ! - - - - - - - - - - - - - - 
+   ! ζ - DIRECTION
+   ! - - - - - - - - - - - - - - 
 
-      if ( PrintResults ) then
+   if ( mydown == mpi_proc_null .and. k == kl ) then
 
-         print *, ' '
+      ! ∂u/∂ζ
+      VelocityCurvilinearGradient(1,3)   =  dz2 * (  - one   * q(2,i,j,k+2) &
+                                                     + four  * q(2,i,j,k+1) &
+                                                     - three * q(2,i,j,k  ) )
+
+      ! ∂v/∂ζ
+      VelocityCurvilinearGradient(2,3)   =  dz2 * (  - one   * q(3,i,j,k+2) &
+                                                     + four  * q(3,i,j,k+1) &
+                                                     - three * q(3,i,j,k  ) )
+
+      ! ∂w/∂ζ
+      VelocityCurvilinearGradient(3,3)   =  dz2 * (  - one   * q(4,i,j,k+2) &
+                                                     + four  * q(4,i,j,k+1) &
+                                                     - three * q(4,i,j,k  ) )
+
+   else if ( myright == mpi_proc_null .and. j == ju) then
+
+      ! ∂u/∂ζ
+      VelocityCurvilinearGradient(1,3)   =  dz2 * (    one   * q(2,i,j,k-2) &
+                                                     - four  * q(2,i,j,k-1) &
+                                                     + three * q(2,i,j,k  ) )
+
+      ! ∂v/∂ζ
+      VelocityCurvilinearGradient(2,3)   =  dz2 * (    one   * q(3,i,j,k-2) &
+                                                     - four  * q(3,i,j,k-1) &
+                                                     + three * q(3,i,j,k  ) )
+
+      ! ∂w/∂ζ
+      VelocityCurvilinearGradient(3,3)   =  dz2 * (    one   * q(4,i,j,k-2) &
+                                                     - four  * q(4,i,j,k-1) &
+                                                     + three * q(4,i,j,k  ) )
+
+   else
+
+      ! ∂u/∂ζ
+      VelocityCurvilinearGradient(1,3) = dz2 * ( q(2,i,j,k+1) - q(2,i,j,k-1) )
+      ! ∂v/∂ζ
+      VelocityCurvilinearGradient(2,3) = dz2 * ( q(3,i,j,k+1) - q(3,i,j,k-1) )
+      ! ∂w/∂ζ
+      VelocityCurvilinearGradient(3,3) = dz2 * ( q(4,i,j,k+1) - q(4,i,j,k-1) )
+
+   end if
+
+
+   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -                                                        
+   !                  _                    _                                          
+   !                 | ∂ξ/∂x  ∂ξ/∂y  ∂ξ/∂z  |  
+   ! MetricsTensor = | ∂η/∂x  ∂η/∂y  ∂η/∂z  |                               
+   !                 | ∂ζ/∂x  ∂ζ/∂y  ∂ζ/∂z  |  
+   !                 •-                    -•  
+   ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -                                                        
+
+   MetricsTensor(1,1) = csi(1,i,j,k)
+   MetricsTensor(1,2) = csi(2,i,j,k)
+   MetricsTensor(1,3) = csi(3,i,j,k)
+
+   MetricsTensor(2,1) = eta(1,i,j,k)
+   MetricsTensor(2,2) = eta(2,i,j,k)
+   MetricsTensor(2,3) = eta(3,i,j,k)
+
+   MetricsTensor(3,1) = zet(1,i,j,k)
+   MetricsTensor(3,2) = zet(2,i,j,k)
+   MetricsTensor(3,3) = zet(3,i,j,k)
+
+   ! VelocityGradient(m,l) = ∂um/∂xl = ( ∂um/∂ξp ) * ( ∂ξp/∂xl )
+
+   do m = 1,3
+   do l = 1,3
+      do p = 1,3
          
-         write(*,'(A,F15.12)') 'dcsiL = ', dcsiL
-         write(*,'(A,F15.12)') 'dcsiR = ', dcsiR
+         VelocityGradient(m,l) =   VelocityGradient(m,l) &
+                                 + VelocityCurvilinearGradient(m,p) * MetricsTensor(p,l)
+      end do
+   end do
+   end do
 
-         if ( phiR < zero ) write(*,'(A,F15.12)') 'R InterpCoeff = ', InterpCoeff
-         if ( phiL < zero ) write(*,'(A,F15.12)') 'L InterpCoeff = ', InterpCoeff
+end subroutine VelocityGradientTensor
 
-         print *, ' '
-
-         write(*,'(A,F15.12)') 'a = ', a
-         write(*,'(A,F15.12)') 'b = ', b
-         write(*,'(A,F15.12)') 'c = ', c
-
-         print *, ' '
-
-         write(*,'(A,F15.12)') 'fL(3) = ', fL(3)
-         write(*,'(A,F15.12)') 'fC(3) = ', fC(3)
-         write(*,'(A,F15.12)') 'fR(3) = ', fR(3)
-
-         print *, ' '
-
-         write(*,'(A,F15.12)') 'PressureLinearFlux_NDBC(3) = ', PressureLinearFlux_NDBC(3)
-
-      end if
-
-   end if
-
-   !DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
-
-
-end function PressureLinearFlux_NDBC
 
 
 

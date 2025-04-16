@@ -5,11 +5,11 @@ subroutine p_no_slip_wall_bcond(b)
    integer, intent(in) :: b
 
    ! local variables
-   real (kind = rdf) :: c1 , c2 , c3      ! coeff of each component of the extrapolation
-   real (kind = rdf) :: g0 , g1           ! g22 at the wall and 1 node away from it
-   real (kind = rdf) :: ret0 , ret1       ! (1/Re + xnut) at the wall and 1 node away from it
-   real (kind = rdf) :: f1aux , f2aux     ! internal derivative of the viscous flux
-   real (kind = rdf) :: fv1star , fv2star ! external derivative of the viscous flux
+   real ( kind=rdf ) :: c1 , c2 , c3      ! coeff of each component of the extrapolation
+   real ( kind=rdf ) :: g0 , g1           ! g22 at the wall and 1 node away from it
+   real ( kind=rdf ) :: ret0 , ret1       ! (1/Re + xnut) at the wall and 1 node away from it
+   real ( kind=rdf ) :: f1aux , f2aux     ! internal derivative of the viscous flux
+   real ( kind=rdf ) :: fv1star , fv2star ! external derivative of the viscous flux
 
    integer :: i,j,k
 
@@ -78,14 +78,14 @@ subroutine p_no_slip_wall_bcond(b)
             ret1 = one / ren + xnut(i,j-1,k) 
 
             ! u-derivatives
-            f1aux = de * g1 / ( two * aj(i,j-1,k) ) * ret1 * (-q(2,i,j-2,k) ) 
-            f2aux = de * g0 / ( two * aj(i,j,k)   ) * ret0 * (-four * q(2,i,j-1,k) + q(2,i,j-2,k) ) 
+            f1aux = de * g1 / ( two * aj(i,j+1,k) ) * ret1 * (-q(2,i,j+2,k) ) 
+            f2aux = de * g0 / ( two * aj(i,j,k)   ) * ret0 * (-four * q(2,i,j+1,k) + q(2,i,j+2,k) ) 
 
             fv1star = eta(1,i,j,k) / sqrt(g0) * aj(i,j,k) * ( f2aux - f1aux )
 
             ! v-derivatives
-            f1aux = de * g1 / ( two * aj(i,j-1,k) ) * ret1 * (-q(3,i,j-2,k) ) 
-            f2aux = de * g0 / ( two * aj(i,j,k)   ) * ret0 * (-four * q(3,i,j+1,k) + q(3,i,j-2,k) ) 
+            f1aux = de * g1 / ( two * aj(i,j+1,k) ) * ret1 * (-q(3,i,j+2,k) ) 
+            f2aux = de * g0 / ( two * aj(i,j,k)   ) * ret0 * (-four * q(3,i,j+1,k) + q(3,i,j+2,k) ) 
 
             fv2star = eta(2,i,j,k) / sqrt(g0) * aj(i,j,k) * ( f2aux - f1aux )
 
