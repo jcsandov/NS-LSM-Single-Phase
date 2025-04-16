@@ -89,12 +89,12 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
 
    ! arrays for rhs & solver routines
    !
-   real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku) , intent(inout) :: q
-   real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku) , intent(in)    :: qn, qnm1
-   real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku) , intent(out) :: rh
-   real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku) , intent(inout) :: pk
-   real (kind = rdf), dimension(1:3,il:iu,jl:ju,kl:ku) , intent(in) :: csi,eta,zet
-   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)     , intent(in) :: aj
+   real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku), intent(inout) :: q
+   real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku), intent(in)    :: qn, qnm1
+   real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku), intent(out) :: rh
+   real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku), intent(inout) :: pk
+   real (kind = rdf), dimension(1:3,il:iu,jl:ju,kl:ku), intent(in) :: csi,eta,zet
+   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)    , intent(in) :: aj
 
    !Level set method
    !real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in) :: phi_n, phi_static
