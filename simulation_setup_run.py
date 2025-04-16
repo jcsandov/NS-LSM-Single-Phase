@@ -509,10 +509,10 @@ def run(parameters):
     # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     # Check the server and choose the command to execute
-    if server_name == 'leftraru2':
+    if 'leftraru' in server_name:
         # Server is leftraru2, use sbatch
         execute(f"sbatch {p['queue_filename']}")
-    elif server_name == 'Dellemc':
+    elif 'Dell' in server_name:
         # Server is Dellemc, use mpirun
         execute(f"mpirun -np {p['number_of_processes']} channel > output.dat 2>&1 &")
     else:
