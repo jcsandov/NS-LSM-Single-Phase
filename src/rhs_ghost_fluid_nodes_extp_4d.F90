@@ -443,7 +443,7 @@ subroutine rhs_ghost_fluid_nodes_extp_4d( var , InteriorNodesOnly )
       !search_radius = ten * aj(i,j,k)**( -one_third )
 
       ! If I'm in the water phase or too far from the fs, I just cycle
-      if ( rsign(i,j,k) > one_half .or. abs( phi(i,j,k) ) > BigPhi ) cycle 
+      if ( rsign( phi(i,j,k) ) > one_half .or. abs( phi(i,j,k) ) > BigPhi ) cycle 
 
       BlankingFlag = .false.
 
@@ -503,7 +503,7 @@ subroutine rhs_ghost_fluid_nodes_extp_4d( var , InteriorNodesOnly )
          if ( BlankingFlag ) cycle ! cycle ii,jj,kk
 
          ! ii,jj,kk is in the water phase
-         if ( rsign (ii,jj,kk) > one_half ) then
+         if ( rsign( phi(ii,jj,kk) ) > one_half ) then
             
             nWaterNodesExtp = 1
                     
@@ -545,7 +545,7 @@ subroutine rhs_ghost_fluid_nodes_extp_4d( var , InteriorNodesOnly )
       do jj = max( jnearest-2 , jsta ) , min( jnearest+2 , jend )
       do ii = max( inearest-2 , ista ) , min( inearest+2 , iend )
       
-         if ( rsign (ii,jj,kk) < one_half                .or. & ! ii,jj,kk in the airphase
+         if ( rsign (phi(ii,jj,kk) ) < one_half          .or. & ! ii,jj,kk in the airphase
               norm2( phi_gradient(1:3,ii,jj,kk) ) > two  .or. & ! ∇ϕ not defined
               (ii == inearest .and. jj == jnearest .and. kk == knearest ) ) cycle
 

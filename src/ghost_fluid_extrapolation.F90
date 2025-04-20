@@ -12,9 +12,6 @@ subroutine ghost_fluid_extrapolation( il,iu          , &
                                       phi            , & 
                                       phi_n          , & 
                                       phi_gradient   , & 
-                                      h              , & 
-                                      hn             , & 
-                                      rsign          , &
                                       x,y,z            &                                    
                                     )
 
@@ -62,8 +59,8 @@ real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)     , intent(in)    :: x,y,z ! g
 real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)     , intent(inout) :: xnut
 real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)     , intent(in)    :: phi
 real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)     , intent(in)    :: phi_n
-real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)     , intent(in)    :: h , hn
-real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)     , intent(inout) :: rsign
+!real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)     , intent(in)    :: h , hn
+!real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)     , intent(inout) :: rsign
 real (kind = rdf), dimension(1:3,il:iu,jl:ju,kl:ku) , intent(in)    :: phi_gradient ! ∂phi/∂x_j
 
 ! In-out arguments. q vector is modified in its velocity components
@@ -558,7 +555,7 @@ do g = 1, gfmnodes
     end if
 
     ! skip the air nodes
-    if ( rsign(ii,jj,kk) < one_half .or. BlankingFlag ) cycle
+    if ( rsign( phi(ii,jj,kk) ) < one_half .or. BlankingFlag ) cycle
 
     max_vel_norm_neighbour = max( max_vel_norm_neighbour , &
                                   norm2( (/q(2,ii,jj,kk) , q(3,ii,jj,kk) , q(4,ii,jj,kk)/) ) )
@@ -587,7 +584,7 @@ do g = 1, gfmnodes
     ! when exsign = 0 (air-phase/outbound range), the local T and B terms
     ! added to the global summation are both zero (not considered for lsqm)
 
-    exsign = rsign(ii,jj,kk) ! * ( sign( one , radius_lsqm * dx - rdiff_norm ) + one )/two
+    exsign = rsign( phi(ii,jj,kk) ) ! * ( sign( one , radius_lsqm * dx - rdiff_norm ) + one )/two
     
     ! I'll skip nodes where phi_gradient is large because it's probably taking
     ! nodes from the phi-blanked region (>3 nodes away from the free surface) 
@@ -990,9 +987,7 @@ do g = 1, gfmnodes
   ! deallocate big arrays
   deallocate( t_matrix_system   , a_coeff_vector   , b_matrix_system   )
 
-end do ! i
-!end do ! j
-!end do ! k
+end do ! gfm nodes
 
 !DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
 ! I'll use the previously implemented pressure extrapolation to
@@ -1020,8 +1015,8 @@ include 'tangential_vectors.F90'
 include 'tangential_vectors_fs.F90'
 include 'hessian_matrix_curvilinear.F90'
 
-include 'pressure_extrapolation.F90'
-include 'p_correction_post_advection.F90'
+!include 'pressure_extrapolation.F90'
+!include 'p_correction_post_advection.F90'
 include 'q_correction_post_advection.F90'
 include 'VelocityGradientTensor.F90'
 include 'PhiGradientVector.F90'
@@ -1029,7 +1024,7 @@ include 'rhs_exchng3_3d.F90'
 include 'rhs_exchng3_4d.F90'
 include 'get_weight_LSM_GFM.F90'
 include 'velocity_curv_gradient_tensor.F90'
-include 'get_max_distance_neighbourhood.F90'
+!include 'get_max_distance_neighbourhood.F90'
 
 include 'velocity_gradient_extrapolation_free_surface_lsqm.F90'
 include 'normal_dynamic_bc.F90'
@@ -1037,7 +1032,6 @@ include 'free_surface_pressure_gradient.F90'
 include 'velocity_extrapolation_free_surface_lsqm.F90'
 include 'ghost_nodes_velocity_extrapolation.F90'
 include 'ghost_nodes_extrapolation.F90'
-
 
 
 !Uncomment for debugging

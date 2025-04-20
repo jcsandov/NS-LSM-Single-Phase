@@ -80,7 +80,7 @@ subroutine q_correction_post_advection( )
   do j = j_mysta - 1 , j_myend + 1 !jsta , jend !j_mysta - 1 , j_myend + 1
   do i = i_mysta - 1 , i_myend + 1 !ista , iend !i_mysta - 1 , i_myend + 1
           
-    if ( rsign(i,j,k) > one_half .and. phi(i,j,k) * phi_n(i,j,k) < zero ) then !eps_sims ) then
+    if ( rsign( phi(i,j,k) ) > one_half .and. phi(i,j,k) * phi_n(i,j,k) < zero ) then !eps_sims ) then
 
       ! Total weight and auxiliary vars initialisation
       TotalWeight = zero
@@ -138,7 +138,7 @@ subroutine q_correction_post_advection( )
 
         !---------------------------------------------------------------------------------
         ! checking the phase of the stencil
-        phase = rsign(i1,j1,k1) * rsign(i2,j2,k2)
+        phase = rsign( phi(i1,j1,k1) ) * rsign( phi(i2,j2,k2) )
 
         ! skipping non-water stencils
         if ( phase < one_half ) cycle

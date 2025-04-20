@@ -65,8 +65,8 @@ subroutine init ()
      call exchng3_mg_2d(n, eta)
      call exchng3_mg_2d(n, zet)
 
-     call exchng3_mg_1d(n,dtev)
-     call exchng3_mg_1d(n,  wd)
+     !call exchng3_mg_1d(n,dtev)
+     !call exchng3_mg_1d(n,  wd)
      call exchng3_mg_1d(n,  aj)
   end do
   
@@ -1118,9 +1118,11 @@ contains
     !                   mc(1:4,1:4,la:lb), &
     !                      spr(1:3,la:lb))
     
-    if ( turbulence ) allocate (wd(la:lb), &
-                              dtev(la:lb), &
-                              xnut(la:lb))
+    !if ( turbulence ) allocate (wd(la:lb), &
+    !                          dtev(la:lb), &
+    !                          xnut(la:lb))
+
+    if ( turbulence ) allocate ( xnut(la:lb) )
     
     if ( nlinc ) allocate (uij(1:6,la:lb))
 
@@ -1142,12 +1144,15 @@ contains
     !   mai = zero; n1i = zero; n2i = zero; mc = zero; spr = zero
     !end if
 
+    !if ( turbulence ) then
+    !   wd = zero; dtev = zero; xnut = zero
+    !end if
+
     if ( turbulence ) then
-       wd = zero; dtev = zero; xnut = zero
+       xnut = zero
     end if
 
     if ( nlinc ) uij = zero
-
 
        
     ! allocate vars needed for input files;
@@ -1934,8 +1939,8 @@ contains
              y( le_idx(i,j,k,1) )  = sbuf( sbuf_idx(2,ii,jj,kk,myzone) )
              z( le_idx(i,j,k,1) )  = sbuf( sbuf_idx(3,ii,jj,kk,myzone) ) 
           
-             if ( turbulence ) &
-             wd(le_idx(i,j,k,1)) = sbuf(sbuf_idx(4,ii,jj,kk,myzone)) 
+             !if ( turbulence ) &
+             !wd(le_idx(i,j,k,1)) = sbuf(sbuf_idx(4,ii,jj,kk,myzone)) 
           
           end do
        end do

@@ -41,7 +41,6 @@ OBJS = precision.o global.o global_param.o global_app.o global_mpi.o\
 	calc_h.o \
 	calc_h_gradient_ENO2.o \
 	ghost_fluid_extrapolation.o \
-	des_eddy.o \
 	sgtsv.o \
 	xerbla.o \
 	rsmooth.o \
@@ -50,7 +49,6 @@ OBJS = precision.o global.o global_param.o global_app.o global_mpi.o\
 	init_obstacle.o\
 	bcond_obstacle.o\
 	phi_obstacle.o\
-	conservation.o
 
 # ================== MODULE GROUPS ==================
 
@@ -59,7 +57,7 @@ PACKMODULE2 = global_param.mod global_mpi.mod global_app.mod
 PACKMODULE3 = global.mod global_param.mod global_app.mod global_mpi.mod global_osg.mod
 PACKMODULE4 = ad_RKTVD3.F90 calc_RH_AD_WENO3.F90 calc_RH_AD_WENO3_test2.F90 calc_RH_AD.F90 bcond_lsm.F90 bcond_lsm_obstacle.F90 \
 			  reinitialization_benchmark.F90 reinitialisation_test2.F90 calc_sign_ini.F90 calc_sign_ini_2.F90 calc_RH_RN.F90 calc_RH_RN_2.F90 \
-			  calc_lambda_RN.F90 narrowband.F90 calc_NormGrad_d.F90 calc_sign_ini_obstacle.F90 calc_RH_RN_obstacle.F90
+			  calc_lambda_RN.F90 calc_NormGrad_d.F90 calc_sign_ini_obstacle.F90 calc_RH_RN_obstacle.F90
 
 PACKMODULE5 = near_free_surface_q_update.F90 VelocityGradientTensor.F90 PhiGradientVector.F90 \
 			  pressure_extrapolation.F90 p_correction_post_advection.F90
@@ -175,8 +173,8 @@ calc_h.o : calc_h.F90 global_app.mod global_mpi.mod
 calc_h_gradient_ENO2.o : calc_h_gradient_ENO2.F90 global_app.mod global_mpi.mod 
 	$(F90COMP) $(FFLAGS) -c calc_h_gradient_ENO2.F90 
 
-des_eddy.o : des_eddy.F90 $(PACKMODULE2) checksum.mod
-	$(F90COMP) $(FFLAGS) -c des_eddy.F90
+#des_eddy.o : des_eddy.F90 $(PACKMODULE2) checksum.mod
+#	$(F90COMP) $(FFLAGS) -c des_eddy.F90
 
 rsmooth.o : rsmooth.F90 $(PACKMODULE2) checksum.mod
 	$(F90COMP) $(FFLAGS) -c rsmooth.F90
@@ -202,8 +200,8 @@ bcond_obstacle.o : bcond_obstacle.F90 global_app.mod global_mpi.mod global_obsta
 phi_obstacle.o : phi_obstacle.F90 global_app.mod global_mpi.mod global_obstacle.mod
 	$(F90COMP) $(FFLAGS) -c phi_obstacle.F90
 
-conservation.o : conservation.F90  $(PACKMODULE2) global_lsm.F90 
-	$(F90COMP) $(FFLAGS) -c conservation.F90
+#conservation.o : conservation.F90  $(PACKMODULE2) global_lsm.F90 
+#	$(F90COMP) $(FFLAGS) -c conservation.F90
 
 # ================== CLEAN ==================
 

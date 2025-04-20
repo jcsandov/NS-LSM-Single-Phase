@@ -590,7 +590,7 @@ subroutine rhs_convec_quick (decide_upwind)
    ! a kludge but keep it for now---could eliminate this
    ! variable
 
-   diss(2:4,:,:,:) = zero
+   !diss(2:4,:,:,:) = zero
 
    deallocate (up, um)
 

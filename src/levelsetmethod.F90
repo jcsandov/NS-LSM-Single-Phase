@@ -8,10 +8,8 @@ subroutine levelsetmethod( il,iu                   , &
                            eta                     , &
                            zet                     , &
                            aj                      , &
-                           phi, phi_n, rsign       , &
-                           phi_gradient            , &
+                           phi, phi_n              , &
                            x, y, z                 , &
-                           epslsm, wd              , &
                            iteraciontiempo   )
    use global_param
    use global_app
@@ -25,7 +23,7 @@ subroutine levelsetmethod( il,iu                   , &
                           call_reinitialisation, hybrid_reinitialisation, TotalVolumeComputation   , &
                           OrderLSAdvectionBoundaries, phi_outputiter                               , & 
                           OrderReinitialisationBoundaries , ENOBCReinitialisation                  , &
-                          GlobalMassCorrection , BigPhi , limit_ghost_velocities
+                          GlobalMassCorrection , BigPhi , limit_ghost_velocities, epslsm
 
    use global_obstacle, only : obstacle_lsm_ad, boundary_obstacle, is_obstacle, act_obstacle_ad, &
                                act_obstacle_rn,li_obs_ia, li_obs_ib, li_obs_ja, li_obs_jb, li_obs_ka,&
@@ -42,24 +40,21 @@ subroutine levelsetmethod( il,iu                   , &
    real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku), intent(inout) :: q
    real (kind = rdf), dimension(1:3,il:iu,jl:ju,kl:ku), intent(in) :: csi , eta, zet
    real (kind = rdf), dimension(il:iu,jl:ju,kl:ku), intent(in) :: aj
-   real (kind = rdf), intent(in) :: epslsm
+   !real (kind = rdf), intent(in) :: epslsm
    real (kind = rdf), dimension(il:iu,jl:ju,kl:ku),intent(in) :: x,y,z
-   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku), intent(inout) :: rsign
-   real (kind = rdf), dimension(1:3,il:iu,jl:ju,kl:ku) , intent(inout) :: phi_gradient ! ∂phi/∂x_j
-
-   !para obstaculo
-
-   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku), intent(in) :: wd
+   !real (kind = rdf), dimension(il:iu,jl:ju,kl:ku), intent(inout) :: rsign
+   !real (kind = rdf), dimension(1:3,il:iu,jl:ju,kl:ku) , intent(inout) :: phi_gradient ! ∂phi/∂x_j
 
    !argumentos de entrada y salida
 
-   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku), intent(inout) :: phi ,phi_n !,sgndf
+   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku), intent(in)    :: phi_n
+   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku), intent(inout) :: phi
 
    !local
-   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) :: phizero, phiguess, phicorrected
+   real (kind = rdf), dimension(:,:,:), allocatable ::  phicorrected
 
-   integer, dimension(il:iu,jl:ju,kl:ku) :: InterfaceNodesID 
-   integer, dimension(il:iu,jl:ju,kl:ku) :: AdvectionNodes 
+   integer, dimension(:,:,:), allocatable :: InterfaceNodesID 
+   integer, dimension(:,:,:), allocatable :: AdvectionNodes 
 
    ! ___________________________________________________________________________________
    ! 
@@ -117,8 +112,6 @@ subroutine levelsetmethod( il,iu                   , &
 
    real (kind = rdf), dimension(:,:,:,:), allocatable :: ucn_j
 
-   integer, dimension(il:iu,jl:ju,kl:ku) :: nband
-
    integer :: RK
    integer :: i,  j,  k, iter_lsm
 
@@ -150,28 +143,34 @@ subroutine levelsetmethod( il,iu                   , &
    ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
    ! Initialisation
 
+   allocate ( InterfaceNodesID( il:iu , jl:ju , kl:ku ) , &
+                AdvectionNodes( il:iu , jl:ju , kl:ku )  )
+
+   allocate ( phicorrected( il:iu , jl:ju , kl:ku ) )
    phicorrected = zero
 
-   !DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
-   !
-   ! DEBUG VARIABLES
-   !
-   ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
 
-   TriangulationCaseAux     = 1 
+   TriangulationCaseAux = 1 
 
-   ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-   !  ___ _     __   __  __  _       _  _ __   ___  ___    
-   ! | __ |    |  | |__]|__| |       |\/||__| [__  [__     
-   ! |__] |___ |__| |__]|  | |___    |  ||  | ___] ___]    
-   !
-   !  ___  __  _  _  __  _  _ ___ __  ___ _  __  _  _
-   ! |    |  | |\/| |__] |  |  | |__|  |  | |  | |\ |
-   ! |___ |__| |  | |    |__|  | |  |  |  | |__| | \|
-   !
-   ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+   !========================================================================================= 
+   !                                                                            
+   !    ####  #       ####  #####    ##   #         #    #   ##    ####   ####  
+   !   #    # #      #    # #    #  #  #  #         ##  ##  #  #  #      #      
+   !   #      #      #    # #####  #    # #         # ## # #    #  ####   ####  
+   !   #  ### #      #    # #    # ###### #         #    # ######      #      # 
+   !   #    # #      #    # #    # #    # #         #    # #    # #    # #    # 
+   !    ####  ######  ####  #####  #    # ######    #    # #    #  ####   ####  
+   !                                                                            
+   !                                                                            
+   !    ####   ####  #    # #####  #    # #####   ##   ##### #  ####  #    #    
+   !   #    # #    # ##  ## #    # #    #   #    #  #    #   # #    # ##   #    
+   !   #      #    # # ## # #    # #    #   #   #    #   #   # #    # # #  #    
+   !   #      #    # #    # #####  #    #   #   ######   #   # #    # #  # #    
+   !   #    # #    # #    # #      #    #   #   #    #   #   # #    # #   ##    
+   !    ####   ####  #    # #       ####    #   #    #   #   #  ####  #    #    
+   !                                                                               
+   !========================================================================================= 
 
-   !print *, 'New level-set step, ITERATION # ', iteraciontiempo
    
    ! This command swaps TriangulationBitFlag between 0 and 1 circulary every iteration
    !TriangulationBitFlag = xor( TriangulationBitFlag, 1 )
@@ -185,17 +184,6 @@ subroutine levelsetmethod( il,iu                   , &
                            TriangulationCase = TriangulationCaseAux     &
                          )
 
-!  This was included in the TotalWaterVolume subroutine
-!   ! Blanking nodes
-!   if (nblk /= 0) then
-!      do nb = 1, nblk
-!         
-!         AdvectionNodes( li_blk_ia(1,nb) : li_blk_ib(1,nb) , &
-!                         li_blk_ja(1,nb) : li_blk_jb(1,nb) , &
-!                         li_blk_ka(1,nb) : li_blk_kb(1,nb)     ) = 0
-!      end do
-!   end if
-
    TotVol_PreAdv_Local =   Vol_KTet_PreAdv        + &
                            Vol_2ndTet_PreAdv      + &
                            Vol_BulkCells_PreAdv
@@ -208,12 +196,16 @@ subroutine levelsetmethod( il,iu                   , &
    if ( myid == root ) call WriteTotalWaterVolume( TotVol_PreAdv )
 
 
-   ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-   !      __      __ _____  __        _____ __ __ 
-   !  /\ |  \\  /|_ /   | |/  \|\ |  (_  | |_ |__)
-   ! /--\|__/ \/ |__\__ | |\__/| \|  __) | |__|   
-   !                                             
-   ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+   !========================================================================================= 
+   !                                                                                         
+   !    ##   #####  #    # ######  ####  ##### #  ####  #    #     ####  ##### ###### #####  
+   !   #  #  #    # #    # #      #    #   #   # #    # ##   #    #        #   #      #    # 
+   !  #    # #    # #    # #####  #        #   # #    # # #  #     ####    #   #####  #    # 
+   !  ###### #    # #    # #      #        #   # #    # #  # #         #   #   #      #####  
+   !  #    # #    #  #  #  #      #    #   #   # #    # #   ##    #    #   #   #      #      
+   !  #    # #####    ##   ######  ####    #   #  ####  #    #     ####    #   ###### #      
+   !                                                                                         
+   !========================================================================================= 
    ! ϕ-advection:                             !
    ! -------------                            !
    !                                          !
@@ -231,14 +223,18 @@ subroutine levelsetmethod( il,iu                   , &
       ! U^j/J for ϕ-advection  
       allocate (ucn_j(1:3,il:iu,jl:ju,kl:ku))
       ucn_j = zero
+      
       call rhs_contra_j()
    
+      ! I use phicorrected as auxiliar array to store phi_n each iteration
+      phicorrected = phi_n
+
       ! Level-Set advection iterations
       do iter_lsm = 1, numiter_lsm
      
          !call narrowband()
-         call ad_RKTVD3( phi , phi_n , AdvectionNodes )
-         !phi_n = phi     !gp de phi vienen ya actualizados de rutina ad_RKTVD3
+         call ad_RKTVD3( phi , phicorrected , AdvectionNodes )
+         phicorrected = phi     !gp de phi vienen ya actualizados de rutina ad_RKTVD3
      
       end do
    
@@ -269,21 +265,30 @@ subroutine levelsetmethod( il,iu                   , &
 
    end if
    
-   ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
-   !  __  __      ___          __    ___  __        _____ __ __ 
-   ! |__)|_ ||\ || | | /\ |  |(_  /\  | |/  \|\ |  (_  | |_ |__)
-   ! | \ |__|| \|| | |/--\|__|__)/--\ | |\__/| \|  __) | |__|   
-   !                                                           
-   ! * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+   !========================================================================================= 
+   !                                                                                      
+   !  #####  ###### # #    # # ##### #   ##   #      #  ####    ##   ##### #  ####  #    #    
+   !  #    # #      # ##   # #   #   #  #  #  #      # #       #  #    #   # #    # ##   #    
+   !  #    # #####  # # #  # #   #   # #    # #      #  ####  #    #   #   # #    # # #  #    
+   !  #####  #      # #  # # #   #   # ###### #      #      # ######   #   # #    # #  # #    
+   !  #   #  #      # #   ## #   #   # #    # #      # #    # #    #   #   # #    # #   ##    
+   !  #    # ###### # #    # #   #   # #    # ###### #  ####  #    #   #   #  ####  #    #    
+   !                                                                                          
+   !                                                                                          
+   !   ####  ##### ###### #####                                                               
+   !  #        #   #      #    #                                                              
+   !   ####    #   #####  #    #                                                              
+   !       #   #   #      #####                                                               
+   !  #    #   #   #      #                                                                   
+   !   ####    #   ###### #                                                                   
+   !                                                                                      
+   !========================================================================================= 
    
    !write(debugname, fmt ='(a,i6.6)') 'phi_postadvection',iteraciontiempo
    !call outputD3_real( phi(:,:,:) , debugname ) 
 
    if ( call_reinitialisation .and. mod( ntime , RNfreq ) == 0 ) then
-   
-       
-      phizero = phi
-   
+             
       ! Flag variable for interface nodes initialisation
       InterfaceNodesID = 0
       
@@ -297,7 +302,7 @@ subroutine levelsetmethod( il,iu                   , &
          where ( phi < -eps_sims ) phicorrected = -9.9_rdf
          where ( phi >  eps_sims ) phicorrected =  9.9_rdf
             
-         call geometric_reinitialisation( phizero , phicorrected , &
+         call geometric_reinitialisation( phi , phicorrected , &
                                           ConvergenceVolume      , & 
                                           InterfaceNodesID       , & 
                                           TriangulationCase = TriangulationCaseAux    )
@@ -305,7 +310,7 @@ subroutine levelsetmethod( il,iu                   , &
       else
          ! Sussman reinitialisation
            
-         call reinitialisation_test2 ( phizero, phicorrected, InterfaceNodesID )
+         call reinitialisation_test2 ( phi, phicorrected, InterfaceNodesID )
          
       end if
 
@@ -320,20 +325,8 @@ subroutine levelsetmethod( il,iu                   , &
       
    end if
    
-   ! rsign update after level-set update
-   rsign = zero
-   where ( phi > eps_sims ) rsign = one
-
-   ! post advection pressure correction and ghost-nodes update
-   ! call get_phi_gradient()
-   ! call rhs_exchng3_4d ( phi_gradient )
-
-   ! post advection pressure correction and ghost-nodes update
-   ! call p_correction_post_advection()
-   ! call rhs_exchng3_3d ( q(1,:,:,:) )
-
-   ! pressure extrapolation
-   !call pressure_extrapolation()
+   deallocate ( phicorrected )
+   deallocate ( InterfaceNodesID , AdvectionNodes )
 
    contains
      
@@ -348,7 +341,7 @@ subroutine levelsetmethod( il,iu                   , &
    !include 'calc_RH_AD_obstacle.F90'
    include 'rhs_exchng3_3d.F90'
    include 'rhs_exchng3_4d.F90'
-   include 'narrowband.F90'
+   !include 'narrowband.F90'
    !include 'reinitialization.F90'
    include 'reinitialization_benchmark.F90'
    include 'reinitialisation_test2.F90'
@@ -361,9 +354,9 @@ subroutine levelsetmethod( il,iu                   , &
    include 'calc_sign_ini_obstacle.F90'
    include 'calc_lambda_RN.F90'
    include 'testfilter.F90'
-   include 'p_correction_post_advection.F90'
-   include 'pressure_extrapolation.F90'
-   include 'get_phi_gradient.F90'
+   !include 'p_correction_post_advection.F90'
+   !include 'pressure_extrapolation.F90'
+   !include 'get_phi_gradient.F90'
    ! geometric reinitialisation routines
    
    include 'geometric_reinitialisation.F90'

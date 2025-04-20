@@ -44,7 +44,7 @@ subroutine ghost_nodes_velocity_extrapolation(i,j,k, xs, ys, zs, u_fs_lsqm, du_d
       ! if the (ii,jj,kk) is in the air-phase, it's extrapolated using
       ! a Taylor expansion
       
-      if ( rsign(ii,jj,kk) < one_half ) then ! (air-phase)
+      if ( rsign( phi(ii,jj,kk) ) < one_half ) then ! (air-phase)
 
          ! position vector from the free-surface to the extrapolated node 
 

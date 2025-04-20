@@ -44,8 +44,8 @@ call init_phizero_dat() !inicializa phizero
 !call probarromu()
 
 
-call outputD1_real(phi_zero,'phi_zero')
-call outputD1_real(phi_static,'phi_static')
+!call outputD1_real(phi_zero,'phi_zero')
+!call outputD1_real(phi_static,'phi_static')
 !call outputD3_real(funcionprobar,'dmu')
 
 
@@ -82,15 +82,15 @@ subroutine probarromu()
         funcionprobar =zero
 
 
-        do k=le_ka(1),le_kb(1)
-        do j=le_ja(1),le_jb(1)
-        do i=le_ia(1),le_ib(1)
-                l = le_idx(i,j,k,1)
-                !funcionprobar(i,j,k) = rhoLSM(phi_zero(l))
-                funcionprobar(i,j,k) = muLSM(phi_zero(l))
-        end do
-        end do
-        end do
+        !do k=le_ka(1),le_kb(1)
+        !do j=le_ja(1),le_jb(1)
+        !do i=le_ia(1),le_ib(1)
+        !        l = le_idx(i,j,k,1)
+        !        !funcionprobar(i,j,k) = rhoLSM(phi_zero(l))
+        !        funcionprobar(i,j,k) = muLSM(phi_zero(l))
+        !end do
+        !end do
+        !end do
 
         
 
@@ -108,19 +108,17 @@ subroutine init_mg_lsm()
             phi_n(la:lb)              , &
             phi_gradient(1:3,la:lb)   , &
             h(la:lb)                  , &            
-            hn(la:lb)                 , &            
-            h_gradient(1:2,la:lb)     , &
-            rsign(la:lb)                &
+            h_gradient(1:2,la:lb)      &
         )
 
   !inicializarlas en cero
   !        sgndf = zero ; sgndf_n = zero
   phi          = zero 
   phi_n        = zero
-  rsign        = zero
+  !rsign        = zero
   phi_gradient = zero
   h            = zero 
-  hn           = zero 
+  !hn           = zero 
   h_gradient   = zero
   
 
@@ -254,38 +252,38 @@ end subroutine init_input_fileLSM
 
 subroutine init_phistatic()
         !Yue 2D laminar Open channel flow
-        implicit none
+        !implicit none
 
-        real (kind = rdf) :: Lzero
-        integer :: la, lb
-        integer :: ka,kb,ja,jb,ia,ib
+        !real (kind = rdf) :: Lzero
+        !integer :: la, lb
+        !integer :: ka,kb,ja,jb,ia,ib
         
 
 
 
-        Lzero = 1.0_rdf
-        la = le_idx_a(1)
-        lb = le_idx_b(ng)
+        !Lzero = 1.0_rdf
+        !la = le_idx_a(1)
+        !lb = le_idx_b(ng)
 
-        allocate(phi_static(la:lb))
+        !allocate(phi_static(la:lb))
 
-        ka = li_ka(1)
-        kb = li_kb(1)
-        ja = li_ja(1)
-        jb = li_jb(1)
-        ia = li_ia(1)
-        ib = li_ib(1)
+        !ka = li_ka(1)
+        !kb = li_kb(1)
+        !ja = li_ja(1)
+        !jb = li_jb(1)
+        !ia = li_ia(1)
+        !ib = li_ib(1)
 
-        do k=ka,kb
-        do j=ja,jb
-        do i=ia,ib
-                l = le_idx(i,j,k,1)
-                phi_static(l) = Lzero - z(l)
-        end do
-        end do
-        end do
-
-        call mg_exchng3_1d (1, phi_static(:))
+        !do k=ka,kb
+        !do j=ja,jb
+        !do i=ia,ib
+        !        l = le_idx(i,j,k,1)
+        !        phi_static(l) = Lzero - z(l)
+        !end do
+        !end do
+        !end do
+        !
+        !call mg_exchng3_1d (1, phi_static(:))
         
       
  
@@ -330,11 +328,11 @@ subroutine init_phizero_dat()
     la = le_idx_a(1)
     lb = le_idx_b(ng)
 
-    allocate(phi_zero(la:lb))
-    allocate(phi_static(la:lb))
+    !allocate(phi_zero(la:lb))
+    !allocate(phi_static(la:lb))
     
-    phi_zero   = zero
-    phi_static = zero
+    !phi_zero   = zero
+    !phi_static = zero
 
     num_vars = 2
 
@@ -439,8 +437,8 @@ subroutine init_phizero_dat()
              jj = j + gi_ja(1) - 1
              kk = k + gi_ka(1) - 1
 
-             phi_zero(le_idx(i,j,k,1))   = sbuf(sbuf_idx(1,ii,jj,kk,myzone))
-             phi_static(le_idx(i,j,k,1)) = sbuf(sbuf_idx(2,ii,jj,kk,myzone))
+             phi(le_idx(i,j,k,1))   = sbuf(sbuf_idx(1,ii,jj,kk,myzone))
+             phi_n(le_idx(i,j,k,1)) = sbuf(sbuf_idx(2,ii,jj,kk,myzone))
              
           end do
        end do
@@ -449,18 +447,8 @@ subroutine init_phizero_dat()
     deallocate(sbuf, sbuf_idx)
     
 
-    call mg_exchng3_1d ( 1 , phi_zero   (:) )
-    call mg_exchng3_1d ( 1 , phi_static (:) )
-        
-
-    la = le_idx_a(1)
-    lb = le_idx_b(1)
-
-    phi(la:lb)   = phi_zero(la:lb)
-
-    ! I use phi_static just as an array for saving the phi_n variable when it's read 
-    ! from the file
-    phi_n(la:lb) = phi_static(la:lb)
+    call mg_exchng3_1d ( 1 , phi   (:) )
+    call mg_exchng3_1d ( 1 , phi_n (:) )
 
     ! no gp actualizado, solo la parte interior
 

@@ -261,10 +261,11 @@ subroutine rhs_diag_solver ()
   
    end if
   
-   rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
-   rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
-   rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
-   rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
+   !rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
+   !rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
+   !rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
+   !rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
+
    ! Ghost nodes update
    call rhs_exchng3_4d( rh )
    ! ghost fluid nodes extrapolation
@@ -432,13 +433,13 @@ subroutine rhs_diag_solver ()
       ! Free-surface correction
       do i = i_mysta , i_myend
 
-         if ( rsign(i,j,k) > one_half .and. rsign(i-1,j,k) < one_half ) then
+         if ( rsign( phi(i,j,k) ) > one_half .and. rsign( phi(i-1,j,k) ) < one_half ) then
 
             aq(i,1:4) = aq(i,1:4) - aw(i,1:4) * rh(1:4,i-1,j,k)
 
          end if
 
-         if ( rsign(i,j,k) > one_half .and. rsign(i+1,j,k) < one_half ) then
+         if ( rsign( phi(i,j,k) ) > one_half .and. rsign( phi(i+1,j,k) ) < one_half ) then
             
             aq(i,1:4) = aq(i,1:4) - ae(i,1:4) * rh(1:4,i+1,j,k)
          
@@ -448,13 +449,13 @@ subroutine rhs_diag_solver ()
 
       do i = i_mysta , i_myend
 
-         aw(i,1:4) = rsign(i-1,j,k) * rsign(i,j,k) * aw(i,1:4)
+         aw(i,1:4) = rsign( phi(i-1,j,k) ) * rsign( phi(i,j,k) ) * aw(i,1:4)
 
-         aw(i,1:4) = rsign(i,j,k) * aw(i,1:4)
-         ap(i,1:4) = rsign(i,j,k) * ap(i,1:4)  
-         ae(i,1:4) = rsign(i,j,k) * ae(i,1:4)  
+         aw(i,1:4) = rsign( phi(i,j,k) ) * aw(i,1:4)
+         ap(i,1:4) = rsign( phi(i,j,k) ) * ap(i,1:4)  
+         ae(i,1:4) = rsign( phi(i,j,k) ) * ae(i,1:4)  
          
-         ae(i,1:4) = rsign(i+1,j,k) * rsign(i,j,k) * ae(i,1:4)  
+         ae(i,1:4) = rsign( phi(i+1,j,k) ) * rsign( phi(i,j,k) ) * ae(i,1:4)  
 
       end do
 
@@ -532,10 +533,10 @@ subroutine rhs_diag_solver ()
 
 
    ! I extrapolate the rhs again
-   rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
-   rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
-   rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
-   rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
+   !rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
+   !rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
+   !rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
+   !rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
    ! Ghost nodes update
    call rhs_exchng3_4d( rh )
 
@@ -702,10 +703,10 @@ subroutine rhs_diag_solver ()
   
    end if
 
-   rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
-   rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
-   rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
-   rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
+   !rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
+   !rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
+   !rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
+   !rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
    ! Ghost nodes update
    call rhs_exchng3_4d( rh )
    ! ghost fluid nodes extrapolation
@@ -855,13 +856,13 @@ subroutine rhs_diag_solver ()
 
       do j = j_mysta , j_myend
 
-         if ( rsign(i,j,k) > one_half .and. rsign(i,j-1,k) < one_half ) then
+         if ( rsign( phi(i,j,k) ) > one_half .and. rsign( phi(i,j-1,k) ) < one_half ) then
 
             aq(j,1:4) = aq(j,1:4) - aw(j,1:4) * rh(1:4,i,j-1,k)
 
          end if
 
-         if ( rsign(i,j,k) > one_half .and. rsign(i,j+1,k) < one_half ) then
+         if ( rsign( phi(i,j,k) ) > one_half .and. rsign( phi(i,j+1,k) ) < one_half ) then
             
             aq(j,1:4) = aq(j,1:4) - ae(j,1:4) * rh(1:4,i,j+1,k)
          
@@ -871,13 +872,13 @@ subroutine rhs_diag_solver ()
 
       do j = j_mysta , j_myend
 
-         aw(j,1:4) = rsign(i,j-1,k) * rsign(i,j,k) * aw(j,1:4)
+         aw(j,1:4) = rsign( phi(i,j-1,k) ) * rsign( phi(i,j,k) ) * aw(j,1:4)
 
-         aw(j,1:4) = rsign(i,j,k) * aw(j,1:4)
-         ap(j,1:4) = rsign(i,j,k) * ap(j,1:4)  
-         ae(j,1:4) = rsign(i,j,k) * ae(j,1:4)  
+         aw(j,1:4) = rsign( phi(i,j,k) ) * aw(j,1:4)
+         ap(j,1:4) = rsign( phi(i,j,k) ) * ap(j,1:4)  
+         ae(j,1:4) = rsign( phi(i,j,k) ) * ae(j,1:4)  
          
-         ae(j,1:4) = rsign(i,j+1,k) * rsign(i,j,k) * ae(j,1:4)  
+         ae(j,1:4) = rsign( phi(i,j+1,k) ) * rsign( phi(i,j,k) ) * ae(j,1:4)  
 
       end do
 
@@ -956,10 +957,10 @@ subroutine rhs_diag_solver ()
 
    ! I extrapolate the rhs again
    !
-   rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
-   rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
-   rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
-   rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
+   !rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
+   !rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
+   !rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
+   !rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
    
    ! Ghost nodes update
    call rhs_exchng3_4d( rh )
@@ -1076,10 +1077,10 @@ subroutine rhs_diag_solver ()
 
    end if
 
-   rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
-   rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
-   rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
-   rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
+   !rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
+   !rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
+   !rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
+   !rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
    ! Ghost nodes update
    call rhs_exchng3_4d( rh )
    ! ghost fluid nodes extrapolation
@@ -1171,13 +1172,13 @@ subroutine rhs_diag_solver ()
 
       do k = k_mysta , k_myend
 
-         if ( rsign(i,j,k) > one_half .and. rsign(i,j,k-1) < one_half ) then
+         if ( rsign( phi(i,j,k) ) > one_half .and. rsign( phi(i,j,k-1) ) < one_half ) then
 
             aq(k,1:4) = aq(k,1:4) - aw(k,1:4) * rh(1:4,i,j,k-1)
 
          end if
 
-         if ( rsign(i,j,k) > one_half .and. rsign(i,j,k+1) < one_half ) then
+         if ( rsign( phi(i,j,k) ) > one_half .and. rsign( phi(i,j,k+1) ) < one_half ) then
             
             aq(k,1:4) = aq(k,1:4) - ae(k,1:4) * rh(1:4,i,j,k+1)
          
@@ -1187,13 +1188,13 @@ subroutine rhs_diag_solver ()
 
       do k = k_mysta , k_myend
 
-         aw(k,1:4) = rsign(i,j,k-1) * rsign(i,j,k) * aw(k,1:4)
+         aw(k,1:4) = rsign( phi(i,j,k-1) ) * rsign( phi(i,j,k) ) * aw(k,1:4)
 
-         aw(k,1:4) = rsign(i,j,k) * aw(k,1:4)
-         ap(k,1:4) = rsign(i,j,k) * ap(k,1:4)  
-         ae(k,1:4) = rsign(i,j,k) * ae(k,1:4)  
+         aw(k,1:4) = rsign( phi(i,j,k) ) * aw(k,1:4)
+         ap(k,1:4) = rsign( phi(i,j,k) ) * ap(k,1:4)  
+         ae(k,1:4) = rsign( phi(i,j,k) ) * ae(k,1:4)  
          
-         ae(k,1:4) = rsign(i,j,k+1) * rsign(i,j,k) * ae(k,1:4)  
+         ae(k,1:4) = rsign( phi(i,j,k+1) ) * rsign( phi(i,j,k) ) * ae(k,1:4)  
 
       end do
 
@@ -1271,10 +1272,10 @@ subroutine rhs_diag_solver ()
 
    ! I extrapolate the rhs again
    !
-   rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
-   rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
-   rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
-   rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
+   !rh(1,:,:,:) = rsign(:,:,:) * rh(1,:,:,:)
+   !rh(2,:,:,:) = rsign(:,:,:) * rh(2,:,:,:)
+   !rh(3,:,:,:) = rsign(:,:,:) * rh(3,:,:,:)
+   !rh(4,:,:,:) = rsign(:,:,:) * rh(4,:,:,:)
    !
    ! Ghost nodes update
    call rhs_exchng3_4d( rh )

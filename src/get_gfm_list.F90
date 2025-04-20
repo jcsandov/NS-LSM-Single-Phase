@@ -8,7 +8,7 @@ subroutine get_gfm_list()
   do i = i_mysta , i_myend
   
     ! water-phase or nodes too far from the free surface
-    if ( rsign(i,j,k) > one_half .or. abs( phi(i,j,k) ) > five ) cycle
+    if ( rsign( phi(i,j,k) ) > one_half .or. abs( phi(i,j,k) ) > BigPhi ) cycle
   
     BlankingFlag = .false.
   
@@ -47,7 +47,7 @@ subroutine get_gfm_list()
         
       !nWaterNeighbours = nWaterNeighbours + rsign(ii,jj,kk)
            
-      if ( rsign(ii,jj,kk) > one_half ) then
+      if ( rsign( phi(ii,jj,kk) ) > one_half ) then
   
         nWaterNeighbours = one 
         exit search_water_neighbour1
@@ -76,7 +76,7 @@ subroutine get_gfm_list()
   do i = i_mysta , i_myend
   
     ! water-phase or nodes too far from the free surface
-    if ( rsign(i,j,k) > one_half .or. abs( phi(i,j,k) ) > five ) cycle
+    if ( rsign( phi(i,j,k) ) > one_half .or. abs( phi(i,j,k) ) > BigPhi ) cycle
   
     BlankingFlag = .false.
   
@@ -115,7 +115,7 @@ subroutine get_gfm_list()
         
       !nWaterNeighbours = nWaterNeighbours + rsign(ii,jj,kk)
            
-      if ( rsign(ii,jj,kk) > one_half ) then
+      if ( rsign( phi(ii,jj,kk) ) > one_half ) then
   
         nWaterNeighbours = one 
         exit search_water_neighbour2

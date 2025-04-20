@@ -276,45 +276,45 @@ subroutine mg_metrics
    ib = li_ib(ns)
 
    ! calculate computational time step for des equaions
-   if ( turbulence ) then
-
-      do k = ka, kb
-      do j = ja, jb
-      do i = ia, ib
-         l = le_idx(i,j,k,ns)
-
-         Sc = sqrt(xc(l)*xc(l) + yc(l)*yc(l) + zc(l)*zc(l))
-         Se = sqrt(xe(l)*xe(l) + ye(l)*ye(l) + ze(l)*ze(l))
-         Sz = sqrt(xz(l)*xz(l) + yz(l)*yz(l) + zz(l)*zz(l))
-
-         SL = min(Sc, Se, Sz)
-
-         dtev(l) = SL * min(cfl2(myzone), vnn2(myzone)*ren*SL)
-
-         ! Arnone et al. (1995)
-         if ( unsteady ) dtev(l) = min(dtev(l),delti*two/three)
-
-      end do
-      end do
-      end do
-
-      ! blanking area
-      if (nblk /= 0) then
-         do nb = 1, nblk
-            do k = li_blk_ka(ns,nb), li_blk_kb(ns,nb)
-            do j = li_blk_ja(ns,nb), li_blk_jb(ns,nb)
-            do i = li_blk_ia(ns,nb), li_blk_ib(ns,nb)
-               l = le_idx(i,j,k,ns)
-   
-               dtev(l) = zero
-               wd(l) = zero
-            end do
-            end do
-            end do
-         end do
-      end if
-
-   end if
+!   if ( turbulence ) then
+!
+!      do k = ka, kb
+!      do j = ja, jb
+!      do i = ia, ib
+!         l = le_idx(i,j,k,ns)
+!
+!         Sc = sqrt(xc(l)*xc(l) + yc(l)*yc(l) + zc(l)*zc(l))
+!         Se = sqrt(xe(l)*xe(l) + ye(l)*ye(l) + ze(l)*ze(l))
+!         Sz = sqrt(xz(l)*xz(l) + yz(l)*yz(l) + zz(l)*zz(l))
+!
+!         SL = min(Sc, Se, Sz)
+!
+!         dtev(l) = SL * min(cfl2(myzone), vnn2(myzone)*ren*SL)
+!
+!         ! Arnone et al. (1995)
+!         if ( unsteady ) dtev(l) = min(dtev(l),delti*two/three)
+!
+!      end do
+!      end do
+!      end do
+!
+!      ! blanking area
+!      !if (nblk /= 0) then
+!         do nb = 1, nblk
+!            do k = li_blk_ka(ns,nb), li_blk_kb(ns,nb)
+!            do j = li_blk_ja(ns,nb), li_blk_jb(ns,nb)
+!            do i = li_blk_ia(ns,nb), li_blk_ib(ns,nb)
+!               l = le_idx(i,j,k,ns)
+!   
+!               dtev(l) = zero
+!               wd(l) = zero
+!            end do
+!            end do
+!            end do
+!         end do
+!      end if
+!
+!   end if
 
 
   !==================================================

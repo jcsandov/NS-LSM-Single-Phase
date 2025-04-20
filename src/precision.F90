@@ -61,6 +61,17 @@ module precision
 
   real (kind = rdf), parameter :: eps_sims = epsilon(one)
 
+  contains
+  
+  function rsign ( phi_value ) 
+
+     real (kind=rdf)             :: rsign
+     real (kind=rdf), intent(in) :: phi_value
+
+     rsign = merge( one , zero , phi_value > eps_sims )
+
+  end function rsign
+
 end module precision
 
 

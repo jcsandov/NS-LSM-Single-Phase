@@ -10,13 +10,10 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
                         zet                                     , & ! 10
                         aj                                      , & ! 11
                         xnut                                    , & ! 12
-                        pk                                      , & ! 13
                         rh                                      , & ! 14
-                        phi , phi_static , wd                   , &
+                        phi                                     , &
                         phi_gradient                            , &
-                        h                                       , &
                         h_gradient                              , &
-                        rsign                                   , &
                         x, y ,z                                 , &
                         iteraciontiempo                           &
                       )                       
@@ -92,22 +89,22 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
    real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku), intent(inout) :: q
    real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku), intent(in)    :: qn, qnm1
    real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku), intent(out) :: rh
-   real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku), intent(inout) :: pk
+   !real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku), intent(inout) :: pk
    real (kind = rdf), dimension(1:3,il:iu,jl:ju,kl:ku), intent(in) :: csi,eta,zet
    real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)    , intent(in) :: aj
 
    !Level set method
    !real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in) :: phi_n, phi_static
-   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in) :: phi , phi_static
+   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in) :: phi !, phi_static
    real (kind = rdf), dimension(1:3,il:iu,jl:ju,kl:ku), intent(in) :: phi_gradient
-   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)    , intent(in) :: h
+   !real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)    , intent(in) :: h
    real (kind = rdf), dimension(1:2,il:iu,jl:ju,kl:ku), intent(in) :: h_gradient
-   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in) :: rsign
+   !real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in) :: rsign
    real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in) :: x,y,z
    !real (kind = rdf), dimension(:,:,:,:), allocatable :: gforce,sforce, pinterfaz        
 
    !Obstaculo
-   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku), intent(in) :: wd
+   !real (kind = rdf), dimension(il:iu,jl:ju,kl:ku), intent(in) :: wd
    !real (kind = rdf), dimension(:,:,:), allocatable :: identificador 
 
 
@@ -122,7 +119,6 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
 
    ! dummy variables
    real (kind = rdf), dimension(:,:,:,:), allocatable   :: qold_af , &
-                                                           diss    , &
                                                            visc    , &
                                                            ucn_j   , &
                                                            spr     , &
@@ -133,7 +129,7 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
                                                             n2i , &
                                                             mc
 
-   real (kind = rdf), dimension(:,:,:), allocatable     ::  dtau
+   real (kind = rdf), dimension(:,:,:), allocatable     ::  dtau , diss
   
 
    !for debugging
@@ -183,7 +179,7 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
 
    ! allocate variables: dummy, flux variables
    allocate ( qold_af   (1:4 , il:iu , jl:ju , kl:ku ), &
-              diss      (1:4 , il:iu , jl:ju , kl:ku ), &
+              diss      (      il:iu , jl:ju , kl:ku ), &
               visc      (1:3 , il:iu , jl:ju , kl:ku ), &
               ucn_j     (1:3 , il:iu , jl:ju , kl:ku ), &
               fv        (1:3 , il:iu , jl:ju , kl:ku ), &
@@ -211,10 +207,6 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
 
    mai = zero ; n1i = zero ; n2i = zero ; mc = zero ; spr = zero
 
-
-#ifdef DEBUG
-  call init_cksum (igp, jgp, kgp)
-#endif
 
    ! set first and last ** interior ** grid nodes for this process
    ! 
@@ -699,12 +691,17 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
 
    ! Putting everything together
    ! I clean the rhs values from the air phase
-
-   rh(1,:,:,:) = rsign(:,:,:) * ( rh(1,:,:,:) + diss(1,:,:,:) )
-   rh(2,:,:,:) = rsign(:,:,:) * ( rh(2,:,:,:) - visc(1,:,:,:) )
-   rh(3,:,:,:) = rsign(:,:,:) * ( rh(3,:,:,:) - visc(2,:,:,:) )
-   rh(4,:,:,:) = rsign(:,:,:) * ( rh(4,:,:,:) - visc(3,:,:,:) )
-
+   do k = k_mysta , k_myend
+   do j = j_mysta , j_myend
+   do i = i_mysta , idend   ! i_myend
+      rh(1,i,j,k) = rsign( phi(i,j,k) ) * ( rh(1,i,j,k) + diss(  i,j,k) )
+      rh(2,i,j,k) = rsign( phi(i,j,k) ) * ( rh(2,i,j,k) - visc(1,i,j,k) )
+      rh(3,i,j,k) = rsign( phi(i,j,k) ) * ( rh(3,i,j,k) - visc(2,i,j,k) )
+      rh(4,i,j,k) = rsign( phi(i,j,k) ) * ( rh(4,i,j,k) - visc(3,i,j,k) )
+   end do
+   end do
+   end do
+   
    ! RHS extrapolation to the first air layer
 
    ! Ghost nodes update
@@ -717,36 +714,17 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
    !write(debugname, fmt ='(a,i6.6)') 'rsign_solverdaf',iteraciontiempo
    !call outputD3_real( rsign(:,:,:) , debugname ) 
 
-   !write(debugname, fmt ='(a,i6.6)') 'rhsdiagC',iteraciontiempo
-   !call outputD3_real( rh(1,:,:,:) , debugname ) 
-
-   !write(debugname, fmt ='(a,i6.6)') 'rhsdiagX',iteraciontiempo
-   !call outputD3_real( rh(2,:,:,:) , debugname ) 
-
-   !write(debugname, fmt ='(a,i6.6)') 'rhsdiagY',iteraciontiempo
-   !call outputD3_real( rh(3,:,:,:) , debugname ) 
-
-   !write(debugname, fmt ='(a,i6.6)') 'rhsdiagZ',iteraciontiempo
-   !call outputD3_real( rh(4,:,:,:) , debugname ) 
-
-
-!#ifdef DEBUG
-!   call cksum_4d_par ('daf.unst', rh)
-!#endif
 
    ! add forcing term on coarse grids
    !
-   if ( n > 1 ) then
-      if (decide_calc_pk == 1) then
-         call rhs_pk (1)
-      else
-         call rhs_pk (0)
-      end if
-   end if
+   !if ( n > 1 ) then
+   !   if (decide_calc_pk == 1) then
+   !      call rhs_pk (1)
+   !   else
+   !      call rhs_pk (0)
+   !   end if
+   !end if
 
-!#ifdef DEBUG
-!   call cksum_4d_par ('daf.pk', rh)
-!#endif
 
    ! rh is replaced in rhs_diag_solver by brh
    if ( myback  == mpi_proc_null ) rh(:,i_mysta-1,:,:) = zero
@@ -766,209 +744,36 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
    
    end if
 
-   ! setear velocidades cero dentro del obstaculo
-   if (is_obstacle==1) then
-
-      rh( : , li_obs_ia : li_obs_ib , &
-              li_obs_ja : li_obs_jb , &
-              li_obs_ka : li_obs_kb     ) = zero
-   
-   end if
-
-  !idend = i_myend + 1
-  
-  ! right-hand-side on outlet boundary
-  !
-
-  !if ( n == 1 ) then
-  !do i = 1, 2
-  !   ibs = 0
-  !   ibe = 0
-  !   ibse= 0
-  !   inout=0
-  !   if (i == 1 .and. myback  == mpi_proc_null .and. btype(i,myzone) == 5) then
-  !      ibs =i_mysta-1
-  !      ibe =i_mysta
-  !      ibse=ibs
-  !      inout=i
-  !   end if
-  !   if (i == 2 .and. myfront == mpi_proc_null .and. btype(i,myzone) == 5) then
-  !      ibs =i_myend
-  !      ibe =i_myend+1
-  !      ibse=ibe
-  !      inout=i
-  !   end if
-  !   if (inout /= 0) then
-  !      call mg_brhs  (jl, ju, kl, ku, & !  1
-  !                 dc, de, dz, igp, jgp, kgp, & !  2
-  !                 eta(1:3,ibse,jl:ju,kl:ku), & !  4
-  !                 zet(1:3,ibse,jl:ju,kl:ku), & !  5
-  !               ucn_j(1:3,ibse,jl:ju,kl:ku), & !  6
-  !                      aj(ibse,jl:ju,kl:ku), & !  7
-  !                    dtau(ibse,jl:ju,kl:ku), & !  8
-  !                    xnut(ibse,jl:ju,kl:ku), & !  9
-  !                   q(1:4,ibse,jl:ju,kl:ku), & ! 10
-  !                  qn(1:4,ibse,jl:ju,kl:ku), & ! 11
-  !                qnm1(1:4,ibse,jl:ju,kl:ku), & ! 12
-  !                  rh(1:4,ibse,jl:ju,kl:ku)  ) ! 13
-
-  !      call nonreflect_ibc (inout, jl, ju, kl, ku,  &
-  !                                   igp, jgp, kgp, &
-  !                          dtau(ibse,jl:ju,kl:ku), &
-  !                       csi(1:3,ibse,jl:ju,kl:ku), &
-  !                       ucn_j(1,ibse,jl:ju,kl:ku), &
-  !                            aj(ibse,jl:ju,kl:ku), &
-  !                      q(1:4,ibs:ibe,jl:ju,kl:ku), &
-  !                        rh(1:4,ibse,jl:ju,kl:ku) )
-  !   end if
-
-  !end do
-  !end if
-
-!#ifdef DEBUG
-!   call cksum_4d_par ('daf.exit', rh)
-!#endif
-
-   ! include boundary grid plane for characteristics-based boundary conditions
-   !
-   !idend = i_myend
-   !if ( myfront == mpi_proc_null .and. n == 1 .and. btype(2,myzone) == 5 ) then
-   !
-   !   idend = i_myend + 1
-   !
-   !end if
   
    ! calculate model matrices
    call rhs_modal_matrices()
-
-!#ifdef DEBUG
-!   call cksum_5d_par ('daf.mai', mai)
-!   call cksum_5d_par ('daf.n1i', n1i)
-!   call cksum_5d_par ('daf.n2i', n2i)
-!   call cksum_5d_par ('daf.mc', mc)
-!   call cksum_4d_par ('daf.spr', spr)
-!#endif
 
    
    ! implicit diagonal solver
    call rhs_diag_solver ()
 
-
-!#ifdef DEBUG
-!   call cksum_4d_par ('daf._ijk', rh)
-!#endif
-
-   ! update interior nodes
-
-   !write(debugname, fmt ='(a,i6.6)') 'viscX',iteraciontiempo
-   !call outputD3_real( visc(1,:,:,:) , debugname ) 
-
-   !write(debugname, fmt ='(a,i6.6)') 'viscY',iteraciontiempo
-   !call outputD3_real( visc(2,:,:,:) , debugname ) 
-
-   !write(debugname, fmt ='(a,i6.6)') 'viscZ',iteraciontiempo
-   !call outputD3_real( visc(3,:,:,:) , debugname ) 
    
    do k = k_mysta , k_myend
    do j = j_mysta , j_myend
    do i = i_mysta , idend   ! i_myend
-
-   !	if(wd(i,j,k) /= zero) then
       
-         q(1,i,j,k) = qold_af(1,i,j,k) + rsign(i,j,k) * rh(1,i,j,k)
-         q(2,i,j,k) = qold_af(2,i,j,k) + rsign(i,j,k) * rh(2,i,j,k)
-         q(3,i,j,k) = qold_af(3,i,j,k) + rsign(i,j,k) * rh(3,i,j,k)
-         q(4,i,j,k) = qold_af(4,i,j,k) + rsign(i,j,k) * rh(4,i,j,k)
+         q(1,i,j,k) = qold_af(1,i,j,k) + rsign( phi(i,j,k) ) * rh(1,i,j,k)
+         q(2,i,j,k) = qold_af(2,i,j,k) + rsign( phi(i,j,k) ) * rh(2,i,j,k)
+         q(3,i,j,k) = qold_af(3,i,j,k) + rsign( phi(i,j,k) ) * rh(3,i,j,k)
+         q(4,i,j,k) = qold_af(4,i,j,k) + rsign( phi(i,j,k) ) * rh(4,i,j,k)
    
-   !	else
-   
-         !esto deja solucion igual a la iniciaul u=v=w= 0 en obstaculo (o cualquier pared donde wd = 0)
-   
-         !q(1,i,j,k) = qold_af(1,i,j,k)
-         !q(2,i,j,k) = qold_af(2,i,j,k)
-         !q(3,i,j,k) = qold_af(3,i,j,k)
-         !q(4,i,j,k) = qold_af(4,i,j,k)
-       
-   !   end if
-
    end do
    end do
    end do
 
 
    if (n == 1) call bcond_fm ( il, iu, jl, ju, kl, ku, igp, jgp, kgp, dc, de, dz, &
-                               q , csi, eta, zet, aj, x,y,z , xnut , rsign , phi )
+                               q , eta , aj, x,y,z , xnut , phi )
 
-
-   !----------------------------------------------------------------------
-   !			Obstaculo
-   !----------------------------------------------------------------------
 
    call rhs_exchng3_4d (q)   !tiene que llegar con gp actualizados
 
-   !if (n == 1) call bcond_obstacle(il, iu, jl, ju, kl, ku, q)
 
-   !----------------------------------------------------------------------
-
-!#ifdef DEBUG
-!   call cksum_4d_par ('daf.new q', q)
-!#endif
-
-
- ! recompute rh for forcing computation in n level routines
- !
- !if (decide_recalc_rh == 1) then
-
-     ! update q on ghost points
-     ! 
- !    call rhs_exchng3_4d (q)      ! update ghost points: q
- !    call rhs_contra_j
- !    call rhs_viscous
-
-!     if (quick) then
- !       call rhs_flux_sans_convec ()
- !       if ( n > 1 ) then
- !          call rhs_convec_quick (1)
- !       else
- !          call rhs_convec_quick (2)
- !       end if
-!     else
-!        call rhs_flux ()
-!     end if
-
-     ! compute non-linear closure terms
-     ! 
-!      if ( nlinc ) then
-!         if ( craft .and. n == 1 ) call rhs_ns_nlin_craft ()
-!         call rhs_ns_rstress ()
-!      end if
-
-     !call rhs_ns_unst_visc_diss ()
-     !call rhs_unst_visc_diss ()
-
- !     if ( n > 1) call rhs_pk (0)
-
- !    if (myback  == mpi_proc_null) rh(:,i_mysta-1,:,:) = zero
- !    if (myfront == mpi_proc_null) rh(:,i_myend+1,:,:) = zero
- !    if (myleft  == mpi_proc_null) rh(:,:,j_mysta-1,:) = zero
- !    if (myright == mpi_proc_null) rh(:,:,j_myend+1,:) = zero
- !    if (mydown  == mpi_proc_null) rh(:,:,:,k_mysta-1) = zero
- !    if (myup    == mpi_proc_null) rh(:,:,:,k_myend+1) = zero
-
- !    if (nblk /= 0) then
- !    do nb = 1, nblk
- !       rh(:,li_blk_ia(n,nb):li_blk_ib(n,nb), &
- !            li_blk_ja(n,nb):li_blk_jb(n,nb), &
- !            li_blk_ka(n,nb):li_blk_kb(n,nb)) = zero
- !    end do
- !    end if
-
-
-!#ifdef DEBUG
-!     call cksum_4d_par ('daf.new rh', rh)
-!#endif
-
- ! end if
 
    ! deallocate dummy variables
    deallocate ( qold_af, diss, visc, ucn_j, dtau, fv )
@@ -982,16 +787,16 @@ contains
    include 'rhs_diss_p.F90'
    include 'rhs_flux_sans_convec.F90'
    include 'rhs_convec_quick.F90'
-   include 'rhs_pk.F90'
+   !include 'rhs_pk.F90'
    include 'rhs_exchng3_3d.F90'
    include 'rhs_exchng3_4d.F90'
-   include 'rhs_ghost_fluid_nodes_extp_3d.F90'
+   !include 'rhs_ghost_fluid_nodes_extp_3d.F90'
    include 'rhs_ghost_fluid_nodes_extp_4d.F90'
    include 'rhs_modal_matrices.F90'
    include 'rhs_diag_solver.F90'
    include 'rhs_unst_visc_diss.F90'
    include 'rhs_gravity_source_term.F90'
-   include 'near_free_surface_q_update.F90'
+   !include 'near_free_surface_q_update.F90'
    include 'PhiGradientVector.F90'
    include 'VelocityGradientTensor.F90'
 

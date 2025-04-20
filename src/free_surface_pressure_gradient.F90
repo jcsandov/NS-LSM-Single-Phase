@@ -63,7 +63,7 @@ subroutine free_surface_pressure_gradient( i , j , k , xs, ys, zs, pfs , nvec , 
    do jj = max( jsta , j-1 ), min( jend , j+1 )
    do ii = max( ista , i-1 ), min( iend , i+1 )
 
-      if ( rsign(ii,jj,kk) < one_half ) cycle
+      if ( rsign( phi(ii,jj,kk) ) < one_half ) cycle
 
       BlankingFlag = .false.
 
@@ -101,7 +101,7 @@ subroutine free_surface_pressure_gradient( i , j , k , xs, ys, zs, pfs , nvec , 
    do jj = max( jsta , j-sweep_lsqm ), min( jend , j+sweep_lsqm )
    do ii = max( ista , i-sweep_lsqm ), min( iend , i+sweep_lsqm )
 
-      if ( rsign(ii,jj,kk) < one_half ) cycle
+      if ( rsign( phi(ii,jj,kk) ) < one_half ) cycle
 
       BlankingFlag = .false.
 

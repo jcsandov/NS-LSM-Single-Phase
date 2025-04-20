@@ -28,7 +28,7 @@ subroutine rhs_diss_p
 
   real (kind = rdf) :: dcsq, desq, dzsq
   real (kind = rdf) :: g11, g22, g33
-  real (kind = rdf) :: rsignc ! 1 if the nodes for a central scheme are
+  !real (kind = rdf) :: rsignc ! 1 if the nodes for a central scheme are
                               ! all within the water phase. 0 otherwise
   
   real (kind = rdf) :: thickness , damping
@@ -365,10 +365,10 @@ subroutine rhs_diss_p
       !    ( fv(2,i,j+1,k) - two * fv(2,i,j,k) + fv(2,i,j-1,k) ) + &
       !    ( fv(3,i,j,k+1) - two * fv(3,i,j,k) + fv(3,i,j,k-1) ) )
         
-      diss(1,i,j,k) =  pdiss_coef *  ( &
-                       ( fv(1,i+1,j,k) - two * fv(1,i,j,k) + fv(1,i-1,j,k) ) + &
-                       ( fv(2,i,j+1,k) - two * fv(2,i,j,k) + fv(2,i,j-1,k) ) + &
-                       ( fv(3,i,j,k+1) - two * fv(3,i,j,k) + fv(3,i,j,k-1) ) )
+      diss(i,j,k) =  pdiss_coef *  ( &
+                     ( fv(1,i+1,j,k) - two * fv(1,i,j,k) + fv(1,i-1,j,k) ) + &
+                     ( fv(2,i,j+1,k) - two * fv(2,i,j,k) + fv(2,i,j-1,k) ) + &
+                     ( fv(3,i,j,k+1) - two * fv(3,i,j,k) + fv(3,i,j,k-1) ) )
 
    end do
    end do
@@ -378,7 +378,7 @@ subroutine rhs_diss_p
   !diss(1,:,:,:) = diss(1,:,:,:) * rsign(:,:,:) 
 
   ! Update ghost nodes
-  call rhs_exchng3_3d( diss(1,:,:,:) )
+  call rhs_exchng3_3d( diss )
 
 
   !! extrapolate the dissipation to the first air layer

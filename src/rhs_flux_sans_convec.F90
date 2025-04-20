@@ -31,7 +31,7 @@ subroutine rhs_flux_sans_convec
 
   ! local arrays
   !
-    real (kind = rdf), dimension(:,:,:), allocatable :: pJ , pJh
+    real (kind = rdf), dimension(:,:,:), allocatable :: pJ !, pJh
 
   real (kind = rdf) :: dc2, de2, dz2
   
@@ -46,10 +46,10 @@ subroutine rhs_flux_sans_convec
   ! initialize
   ! 
   allocate (pJ(il:iu,jl:ju,kl:ku))
-  allocate (pJh(il:iu,jl:ju,kl:ku))
+  !allocate (pJh(il:iu,jl:ju,kl:ku))
 
   pJ  = zero
-  pJh = zero
+  !pJh = zero
 
   ! dum --> dc2 or de2 or dz2
   dc2 = one_half * dc
@@ -60,14 +60,14 @@ subroutine rhs_flux_sans_convec
   do j = j_mysta-1, j_myend+1
   do i = i_mysta-1, i_myend+1
     pJ(i,j,k)  =   q(1,i,j,k) / aj(i,j,k) ! p/J
-    pJh(i,j,k) =  ( h(i,j,k)/(FrLSM**two) ) / aj(i,j,k) ! h / (J * Fr^2)
+    !pJh(i,j,k) =  ( h(i,j,k)/(FrLSM**two) ) / aj(i,j,k) ! h / (J * Fr^2)
   end do
   end do
   end do
 
   !DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
   ! I'll deactivate this term for the moment:
-  pJh = zero
+  !pJh = zero
   !DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
 
   ! TO DO: think about whole array operations
@@ -76,11 +76,11 @@ subroutine rhs_flux_sans_convec
   do j = j_mysta, j_myend
   do i = i_mysta, i_myend
    
-        rh(2,i,j,k) = dc2 * ( ( pJ(i+1,j,k) + pJh(i+1,j,k) ) * csi(1,i+1,j,k)  - & 
-                              ( pJ(i-1,j,k) + pJh(i-1,j,k) ) * csi(1,i-1,j,k) )
+        rh(2,i,j,k) = dc2 * ( ( pJ(i+1,j,k) ) * csi(1,i+1,j,k)  - & 
+                              ( pJ(i-1,j,k) ) * csi(1,i-1,j,k) )
         
-        rh(3,i,j,k) = dc2 * ( ( pJ(i+1,j,k) + pJh(i+1,j,k) ) * csi(2,i+1,j,k)  - &
-                              ( pJ(i-1,j,k) + pJh(i-1,j,k) ) * csi(2,i-1,j,k) )
+        rh(3,i,j,k) = dc2 * ( ( pJ(i+1,j,k)  ) * csi(2,i+1,j,k)  - &
+                              ( pJ(i-1,j,k)  ) * csi(2,i-1,j,k) )
         
         rh(4,i,j,k) = dc2 * (   pJ(i+1,j,k) * csi(3,i+1,j,k) - &
                                 pJ(i-1,j,k) * csi(3,i-1,j,k) )
@@ -94,11 +94,11 @@ subroutine rhs_flux_sans_convec
   do j = j_mysta, j_myend
   do i = i_mysta, i_myend
   
-    rh(2,i,j,k) = rh(2,i,j,k) + de2 * ( ( pJ(i,j+1,k) + pJh(i,j+1,k) ) * eta(1,i,j+1,k) - &
-                                        ( pJ(i,j-1,k) + pJh(i,j-1,k) ) * eta(1,i,j-1,k) )
+    rh(2,i,j,k) = rh(2,i,j,k) + de2 * ( ( pJ(i,j+1,k) ) * eta(1,i,j+1,k) - &
+                                        ( pJ(i,j-1,k) ) * eta(1,i,j-1,k) )
 
-    rh(3,i,j,k) = rh(3,i,j,k) + de2 * ( ( pJ(i,j+1,k) + pJh(i,j+1,k) ) * eta(2,i,j+1,k) - &
-                                        ( pJ(i,j-1,k) + pJh(i,j-1,k) ) * eta(2,i,j-1,k) )
+    rh(3,i,j,k) = rh(3,i,j,k) + de2 * ( ( pJ(i,j+1,k) ) * eta(2,i,j+1,k) - &
+                                        ( pJ(i,j-1,k) ) * eta(2,i,j-1,k) )
 
     rh(4,i,j,k) = rh(4,i,j,k) + de2 * (   pJ(i,j+1,k) * eta(3,i,j+1,k) - & 
                                           pJ(i,j-1,k) * eta(3,i,j-1,k) )
@@ -113,11 +113,11 @@ subroutine rhs_flux_sans_convec
   do j = j_mysta, j_myend
   do i = i_mysta, i_myend
 
-    rh(2,i,j,k) = rh(2,i,j,k) + dz2 * ( ( pJ(i,j,k+1) + pJh(i,j,k+1) ) * zet(1,i,j,k+1)  - &
-                                        ( pJ(i,j,k-1) + pJh(i,j,k-1) ) * zet(1,i,j,k-1) )
+    rh(2,i,j,k) = rh(2,i,j,k) + dz2 * ( ( pJ(i,j,k+1) ) * zet(1,i,j,k+1)  - &
+                                        ( pJ(i,j,k-1) ) * zet(1,i,j,k-1) )
 
-    rh(3,i,j,k) = rh(3,i,j,k) + dz2 * ( ( pJ(i,j,k+1) + pJh(i,j,k+1) ) * zet(2,i,j,k+1)  - &
-                                        ( pJ(i,j,k-1) + pJh(i,j,k-1) ) * zet(2,i,j,k-1) )
+    rh(3,i,j,k) = rh(3,i,j,k) + dz2 * ( ( pJ(i,j,k+1) ) * zet(2,i,j,k+1)  - &
+                                        ( pJ(i,j,k-1) ) * zet(2,i,j,k-1) )
     
     rh(4,i,j,k) = rh(4,i,j,k) + dz2 * (   pJ(i,j,k+1) * zet(3,i,j,k+1) - &
                                           pJ(i,j,k-1) * zet(3,i,j,k-1) )
@@ -143,7 +143,7 @@ subroutine rhs_flux_sans_convec
   end do
 
   deallocate (pJ)
-  deallocate (pJh)
+  !deallocate (pJh)
 
 end subroutine rhs_flux_sans_convec
 

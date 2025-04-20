@@ -4,15 +4,15 @@ module global_lsm
 use precision
 implicit none
 
-real(kind = rdf), dimension(:), allocatable :: phi_zero, phi_static
+!real(kind = rdf), dimension(:), allocatable :: phi_zero, phi_static
 !real(kind = rdf), dimension(:), allocatable :: sgndf,sgndf_n
-real(kind = rdf), dimension(:), allocatable :: phi,phi_n
-real(kind = rdf), dimension(:), allocatable :: h, hn
+real(kind = rdf), dimension(:), allocatable :: phi , phi_n
+real(kind = rdf), dimension(:), allocatable :: h !, hn
 real(kind = rdf), dimension(:,:), allocatable :: phi_gradient
 real(kind = rdf), dimension(:,:), allocatable :: h_gradient
 ! flag variable for identifying the nodes to be extrapolated using
 ! the zero-shear condition
-real(kind = rdf), dimension(:), allocatable :: rsign
+!real(kind = rdf), dimension(:), allocatable :: rsign
 
 real(kind = rdf) :: epslsm !parametro malla epsilon
 real(kind = rdf) :: epsReinitialisation !reini convergence threshold

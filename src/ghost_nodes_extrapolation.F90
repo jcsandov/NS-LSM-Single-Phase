@@ -76,7 +76,7 @@ subroutine ghost_nodes_extrapolation(i,j,k, xs, ys, zs , u_fs_lsqm, pfs, du_dx_f
 
       if ( BlankingFlag ) cycle
 
-      if ( rsign(ii,jj,kk) < one_half ) then ! (air-phase)
+      if ( rsign( phi(ii,jj,kk) ) < one_half ) then ! (air-phase)
 
          ! position vector from the free-surface to the extrapolated node 
 

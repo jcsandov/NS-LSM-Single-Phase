@@ -13,7 +13,7 @@ subroutine get_weight_LSM_GFM( xs , ys , zs , nvec , dmax , ii , jj , kk , weigh
   real(kind=rdf) :: num , denom
   real(kind=rdf), parameter :: eps_denom = 1.0E-6
 
-  if ( rsign(ii,jj,kk) < one_half ) return
+  if ( rsign( phi(ii,jj,kk) ) < one_half ) return
 
   !---------------------------------------------------
   !   

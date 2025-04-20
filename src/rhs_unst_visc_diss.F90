@@ -106,22 +106,9 @@ subroutine rhs_unst_visc_diss
       !dq3dt = e_source*(three*q(3,i,j,k)-four*qn(3,i,j,k)+qnm1(3,i,j,k)) / dtaj *rhoLSM(phi_n(i,j,k))
       !dq4dt = e_source*(three*q(4,i,j,k)-four*qn(4,i,j,k)+qnm1(4,i,j,k)) / dtaj *rhoLSM(phi_n(i,j,k))
 
-      !dq2dt(i,j,k) = rsign(i,j,k) * e_source * ( three * q(2,i,j,k) - four * qn(2,i,j,k) + qnm1(2,i,j,k) ) / dtaj 
-      !dq3dt(i,j,k) = rsign(i,j,k) * e_source * ( three * q(3,i,j,k) - four * qn(3,i,j,k) + qnm1(3,i,j,k) ) / dtaj 
-      !dq4dt(i,j,k) = rsign(i,j,k) * e_source * ( three * q(4,i,j,k) - four * qn(4,i,j,k) + qnm1(4,i,j,k) ) / dtaj 
-
-      dq2dt = rsign(i,j,k) * e_source * ( three * q(2,i,j,k) - four * qn(2,i,j,k) + qnm1(2,i,j,k) ) / dtaj 
-      dq3dt = rsign(i,j,k) * e_source * ( three * q(3,i,j,k) - four * qn(3,i,j,k) + qnm1(3,i,j,k) ) / dtaj 
-      dq4dt = rsign(i,j,k) * e_source * ( three * q(4,i,j,k) - four * qn(4,i,j,k) + qnm1(4,i,j,k) ) / dtaj 
-
-      ! rh(1,i,j,k) = rh(1,i,j,k) + rsign(i,j,k) * ( diss(1,i,j,k)                         )            
-      ! rh(2,i,j,k) = rh(2,i,j,k) + rsign(i,j,k) * ( diss(2,i,j,k) + dq2dt - visc(1,i,j,k) )
-      ! rh(3,i,j,k) = rh(3,i,j,k) + rsign(i,j,k) * ( diss(3,i,j,k) + dq3dt - visc(2,i,j,k) )
-      ! rh(4,i,j,k) = rh(4,i,j,k) + rsign(i,j,k) * ( diss(4,i,j,k) + dq4dt - visc(3,i,j,k) )
-
-      !rh(2,i,j,k) = rh(2,i,j,k) + rsign(i,j,k) * dq2dt(i,j,k)
-      !rh(3,i,j,k) = rh(3,i,j,k) + rsign(i,j,k) * dq3dt(i,j,k)
-      !rh(4,i,j,k) = rh(4,i,j,k) + rsign(i,j,k) * dq4dt(i,j,k)
+      dq2dt = e_source * ( three * q(2,i,j,k) - four * qn(2,i,j,k) + qnm1(2,i,j,k) ) / dtaj 
+      dq3dt = e_source * ( three * q(3,i,j,k) - four * qn(3,i,j,k) + qnm1(3,i,j,k) ) / dtaj 
+      dq4dt = e_source * ( three * q(4,i,j,k) - four * qn(4,i,j,k) + qnm1(4,i,j,k) ) / dtaj 
 
       rh(2,i,j,k) = rh(2,i,j,k) + dq2dt
       rh(3,i,j,k) = rh(3,i,j,k) + dq3dt

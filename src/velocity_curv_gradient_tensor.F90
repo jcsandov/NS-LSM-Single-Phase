@@ -123,9 +123,9 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
 
       rLL = zero                    
       rL  = zero                   
-      rC  = rsign ( i   , j , k )  
-      rR  = rsign ( i+1 , j , k )  
-      rRR = rsign ( i+2 , j , k )  
+      rC  = rsign ( phi( i   , j , k ) )  
+      rR  = rsign ( phi( i+1 , j , k ) )  
+      rRR = rsign ( phi( i+2 , j , k ) )  
 
       uLL = zero                  ;  vLL = zero                  ;  wLL = zero                 ;
       uL  = zero                  ;  vL  = zero                  ;  wL  = zero                 ;
@@ -136,10 +136,10 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
    else if ( i == ista + 1 ) then
          
       rLL      = zero ! dummy
-      rL       = rsign ( i-1 , j , k )
-      rC       = rsign ( i   , j , k )
-      rR       = rsign ( i+1 , j , k )
-      rRR      = rsign ( i+2 , j , k )
+      rL       = rsign ( phi( i-1 , j , k ) )
+      rC       = rsign ( phi( i   , j , k ) )
+      rR       = rsign ( phi( i+1 , j , k ) )
+      rRR      = rsign ( phi( i+2 , j , k ) )
 
       uLL = zero                  ;  vLL = zero                  ;  wLL = zero                 ;
       uL  = q ( 2, i-1 , j , k )  ;  vL  = q ( 3, i-1 , j , k )  ;  wL  = q ( 4, i-1 , j , k ) ;
@@ -149,10 +149,10 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
 
    else if ( i == iend - 1 ) then
          
-      rLL      = rsign ( i-2 , j , k )
-      rL       = rsign ( i-1 , j , k )
-      rC       = rsign ( i   , j , k )
-      rR       = rsign ( i+1 , j , k )
+      rLL      = rsign ( phi( i-2 , j , k ) )
+      rL       = rsign ( phi( i-1 , j , k ) )
+      rC       = rsign ( phi( i   , j , k ) )
+      rR       = rsign ( phi( i+1 , j , k ) )
       rRR      = zero ! dummy
 
       uLL = q ( 2, i-2 , j , k )  ;  vLL = q ( 3, i-2 , j , k )  ;  wLL = q ( 4, i-2 , j , k ) ;
@@ -166,9 +166,9 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
          
       bias_csi = -1
 
-      rLL      = rsign ( i-2 , j , k )
-      rL       = rsign ( i-1 , j , k )
-      rC       = rsign ( i   , j , k )
+      rLL      = rsign ( phi( i-2 , j , k ) )
+      rL       = rsign ( phi( i-1 , j , k ) )
+      rC       = rsign ( phi( i   , j , k ) )
       rR       = zero ! dummy
       rRR      = zero ! dummy
 
@@ -180,11 +180,11 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
 
    else
 
-      rLL      = rsign ( i-2 , j , k )
-      rL       = rsign ( i-1 , j , k )
-      rC       = rsign ( i   , j , k )
-      rR       = rsign ( i+1 , j , k )
-      rRR      = rsign ( i+2 , j , k )
+      rLL      = rsign ( phi( i-2 , j , k ) )
+      rL       = rsign ( phi( i-1 , j , k ) )
+      rC       = rsign ( phi( i   , j , k ) )
+      rR       = rsign ( phi( i+1 , j , k ) )
+      rRR      = rsign ( phi( i+2 , j , k ) )
 
       uLL = q ( 2, i-2 , j , k )  ;  vLL = q ( 3, i-2 , j , k )  ;  wLL = q ( 4, i-2 , j , k ) ;
       uL  = q ( 2, i-1 , j , k )  ;  vL  = q ( 3, i-1 , j , k )  ;  wL  = q ( 4, i-1 , j , k ) ;
@@ -243,9 +243,9 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
 
       rLL = zero                    
       rL  = zero                   
-      rC  = rsign ( i , j   , k )  
-      rR  = rsign ( i , j+1 , k )  
-      rRR = rsign ( i , j+2 , k )  
+      rC  = rsign ( phi (i , j   , k ) )  
+      rR  = rsign ( phi (i , j+1 , k ) )  
+      rRR = rsign ( phi (i , j+2 , k ) )  
 
       uLL = zero                  ;  vLL = zero                  ;  wLL = zero                 ;
       uL  = zero                  ;  vL  = zero                  ;  wL  = zero                 ;
@@ -256,10 +256,10 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
    else if ( j == jsta + 1 ) then
          
       rLL      = zero ! dummy
-      rL       = rsign ( i , j-1 , k )
-      rC       = rsign ( i , j   , k )
-      rR       = rsign ( i , j+1 , k )
-      rRR      = rsign ( i , j+2 , k )
+      rL       = rsign ( phi( i , j-1 , k ) )
+      rC       = rsign ( phi( i , j   , k ) )
+      rR       = rsign ( phi( i , j+1 , k ) )
+      rRR      = rsign ( phi( i , j+2 , k ) )
 
       uLL = zero                  ;  vLL = zero                  ;  wLL = zero                 ;
       uL  = q ( 2, i , j-1 , k )  ;  vL  = q ( 3, i , j-1 , k )  ;  wL  = q ( 4, i , j-1 , k ) ;
@@ -269,10 +269,10 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
 
    else if ( j == jend - 1 ) then
          
-      rLL      = rsign ( i , j-2 , k )
-      rL       = rsign ( i , j-1 , k )
-      rC       = rsign ( i , j   , k )
-      rR       = rsign ( i , j+1 , k )
+      rLL      = rsign ( phi( i , j-2 , k ) )
+      rL       = rsign ( phi( i , j-1 , k ) )
+      rC       = rsign ( phi( i , j   , k ) )
+      rR       = rsign ( phi( i , j+1 , k ) )
       rRR      = zero ! dummy
 
       uLL = q ( 2, i , j-2 , k )  ;  vLL = q ( 3, i , j-2 , k )  ;  wLL = q ( 4, i , j-2 , k ) ;
@@ -286,9 +286,9 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
          
       bias_eta = -1
 
-      rLL      = rsign ( i , j-2 , k )
-      rL       = rsign ( i , j-1 , k )
-      rC       = rsign ( i , j   , k )
+      rLL      = rsign ( phi( i , j-2 , k ) )
+      rL       = rsign ( phi( i , j-1 , k ) )
+      rC       = rsign ( phi( i , j   , k ) )
       rR       = zero ! dummy
       rRR      = zero ! dummy
 
@@ -300,11 +300,11 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
 
    else
 
-      rLL      = rsign ( i , j-2 , k )
-      rL       = rsign ( i , j-1 , k )
-      rC       = rsign ( i , j   , k )
-      rR       = rsign ( i , j+1 , k )
-      rRR      = rsign ( i , j+2 , k )
+      rLL      = rsign ( phi( i , j-2 , k ) )
+      rL       = rsign ( phi( i , j-1 , k ) )
+      rC       = rsign ( phi( i , j   , k ) )
+      rR       = rsign ( phi( i , j+1 , k ) )
+      rRR      = rsign ( phi( i , j+2 , k ) )
 
       uLL = q ( 2, i , j-2 , k )  ;  vLL = q ( 3, i , j-2 , k )  ;  wLL = q ( 4, i , j-2 , k ) ;
       uL  = q ( 2, i , j-1 , k )  ;  vL  = q ( 3, i , j-1 , k )  ;  wL  = q ( 4, i , j-1 , k ) ;
@@ -364,9 +364,9 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
 
       rLL = zero                    
       rL  = zero                   
-      rC  = rsign ( i , j , k   )  
-      rR  = rsign ( i , j , k+1 )  
-      rRR = rsign ( i , j , k+2 )  
+      rC  = rsign ( phi( i , j , k   ) )  
+      rR  = rsign ( phi( i , j , k+1 ) )  
+      rRR = rsign ( phi( i , j , k+2 ) )  
 
       uLL = zero                  ;  vLL = zero                  ;  wLL = zero                 ;
       uL  = zero                  ;  vL  = zero                  ;  wL  = zero                 ;
@@ -377,10 +377,10 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
    else if ( k == ksta + 1 ) then
          
       rLL      = zero ! dummy
-      rL       = rsign ( i , j , k-1 )
-      rC       = rsign ( i , j , k   )
-      rR       = rsign ( i , j , k+1 )
-      rRR      = rsign ( i , j , k+2 )
+      rL       = rsign ( phi( i , j , k-1 ) )
+      rC       = rsign ( phi( i , j , k   ) )
+      rR       = rsign ( phi( i , j , k+1 ) )
+      rRR      = rsign ( phi( i , j , k+2 ) )
 
       uLL = zero                  ;  vLL = zero                  ;  wLL = zero                 ;
       uL  = q ( 2, i , j , k-1 )  ;  vL  = q ( 3, i , j , k-1 )  ;  wL  = q ( 4, i , j , k-1 ) ;
@@ -390,10 +390,10 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
 
    else if ( k == kend - 1 ) then
          
-      rLL      = rsign ( i , j , k-2 )
-      rL       = rsign ( i , j , k-1 )
-      rC       = rsign ( i , j , k   )
-      rR       = rsign ( i , j , k+1 )
+      rLL      = rsign ( phi( i , j , k-2 ) )
+      rL       = rsign ( phi( i , j , k-1 ) )
+      rC       = rsign ( phi( i , j , k   ) )
+      rR       = rsign ( phi( i , j , k+1 ) )
       rRR      = zero ! dummy
 
       uLL = q ( 2, i , j , k-2 )  ;  vLL = q ( 3, i , j , k-2 )  ;  wLL = q ( 4, i , j , k-2 ) ;
@@ -407,9 +407,9 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
          
       bias_zet = -1
 
-      rLL      = rsign ( i , j , k-2 )
-      rL       = rsign ( i , j , k-1 )
-      rC       = rsign ( i , j , k   )
+      rLL      = rsign ( phi( i , j , k-2 ) )
+      rL       = rsign ( phi( i , j , k-1 ) )
+      rC       = rsign ( phi( i , j , k   ) )
       rR       = zero ! dummy
       rRR      = zero ! dummy
 
@@ -421,11 +421,11 @@ subroutine velocity_curv_gradient_tensor(i, j, k, velocity_curv_gradient, exsign
 
    else
 
-      rLL      = rsign ( i , j , k-2 )
-      rL       = rsign ( i , j , k-1 )
-      rC       = rsign ( i , j , k   )
-      rR       = rsign ( i , j , k+1 )
-      rRR      = rsign ( i , j , k+2 )
+      rLL      = rsign ( phi( i , j , k-2 ) )
+      rL       = rsign ( phi( i , j , k-1 ) )
+      rC       = rsign ( phi( i , j , k   ) )
+      rR       = rsign ( phi( i , j , k+1 ) )
+      rRR      = rsign ( phi( i , j , k+2 ) )
 
       uLL = q ( 2, i , j , k-2 )  ;  vLL = q ( 3, i , j , k-2 )  ;  wLL = q ( 4, i , j , k-2 ) ;
       uL  = q ( 2, i , j , k-1 )  ;  vL  = q ( 3, i , j , k-1 )  ;  wL  = q ( 4, i , j , k-1 ) ;

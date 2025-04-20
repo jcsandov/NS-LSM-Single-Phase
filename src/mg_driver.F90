@@ -17,7 +17,7 @@ subroutine mg_driver(iteraciontiempo)
    use global_mpi
    use global_osg
    use global_app
-   use wf_mpi
+   !use wf_mpi
 
    use global_lsm
    use global_debug
@@ -72,7 +72,7 @@ subroutine mg_driver(iteraciontiempo)
    lb = le_idx_b(1)
 
    !phi_n(la:lb) =  phi(la:lb)
-   hn(:) = h(:)
+   !hn(:) = h(:)
 
    ! Compute rsign flag-variable
    ! eps_sims: smallest representable number for a given
@@ -80,16 +80,16 @@ subroutine mg_driver(iteraciontiempo)
    ! rsign = 1 ---> water - phase
    ! rsign = 0 ---> air   - phase
    
-   rsign = zero
-   where ( phi > eps_sims ) rsign = one
+   !rsign = zero
+   !where ( phi > eps_sims ) rsign = one
 
    ! Set rsign = 0 within the obstacle if needed
-   call rsign_blanking ( le_ia(1),le_ib(1)           , &
-                         le_ja(1),le_jb(1)           , &
-                         le_ka(1),le_kb(1)           , &
-                         igp(1), jgp(1), kgp(1)      , & 
-                         rsign(la:lb)                  &
-                        )
+   !call rsign_blanking ( le_ia(1),le_ib(1)           , &
+   !                      le_ja(1),le_jb(1)           , &
+   !                      le_ka(1),le_kb(1)           , &
+   !                      igp(1), jgp(1), kgp(1)      , & 
+   !                      rsign(la:lb)                  &
+   !                     )
 
    !call calc_phi_gradient( le_ia(1),le_ib(1)           ,&
    !                        le_ja(1),le_jb(1)           ,&
@@ -151,7 +151,7 @@ subroutine mg_driver(iteraciontiempo)
    !
    call mg_inject ( phi_n (:) )
    call mg_inject ( phi   (:) )
-   call mg_inject ( rsign (:) )
+   !call mg_inject ( rsign (:) )
 
    !gp
    do n=1,ng
@@ -159,7 +159,7 @@ subroutine mg_driver(iteraciontiempo)
       !call mg_exchng3_2d ( n , phi_gradient(1:3,:) ) 
       call mg_exchng3_1d ( n , phi_n(:) )
       call mg_exchng3_1d ( n , phi  (:) )
-      call mg_exchng3_1d ( n , rsign(:) )
+      !call mg_exchng3_1d ( n , rsign(:) )
 
    end do
    
@@ -197,10 +197,13 @@ subroutine mg_driver(iteraciontiempo)
       ! save fine grid solution for
       ! various residual calculations
 
-      do l = le_idx_a(1) , le_idx_b(1)
-         qold_mg(1:4,l) = q(1:4,l)
-         qold_mg(5,l)   = xnut(l)
-      end do
+      !do l = le_idx_a(1) , le_idx_b(1)
+      !   qold_mg(1:4,l) = q(1:4,l)
+      !   qold_mg(5,l)   = xnut(l)
+      !end do
+
+      qold_mg(1:4,:) = q(1:4,:)
+      qold_mg(5,:)   = xnut(:)
 
       ! multigrid v-cycle
       do n = ns, nstop
@@ -214,7 +217,7 @@ subroutine mg_driver(iteraciontiempo)
 
             ! mg_inject; mg_calc_pk
             
-            call mg_nlevel (n)
+            !call mg_nlevel (n)
 
             ! update ghost points for uij
             
@@ -222,10 +225,6 @@ subroutine mg_driver(iteraciontiempo)
                call mg_exchng3_2d(n, uij)
             end if
            
-#ifdef DEBUG
-            call mg_cksum ('mg.nlevel', n, q)
-#endif
-
             call mg_zero_pk_boundary (n, pk)
 !           call mg_cksum ('nl-pk',n, pk(:,:))
 
@@ -242,15 +241,11 @@ subroutine mg_driver(iteraciontiempo)
             end if
 
             ! exchange ghost points for q
-            call mg_exchng3_2d (n, q)
+            ! call mg_exchng3_2d (n, q)
 
-            if (turbulence) then
-               call mg_exchng3_1d (n, xnut)
-            end if
-
-#ifdef DEBUG
-            call mg_cksum ('mg.exchg_q', n, q)
-#endif
+            !if (turbulence) then
+            !   call mg_exchng3_1d (n, xnut)
+            !end if
 
 
             if ( des .and. n == ns ) then
@@ -272,11 +267,7 @@ subroutine mg_driver(iteraciontiempo)
                !  xnut(la:lb),           & ! 13
                !  rsign(la:lb))            
                 
-               if(nzone >1 ) &
-               call mg_bintp_tur
-#ifdef DEBUG
-               call mg_cksum ('mg.osg.tur', n, q)
-#endif
+               if( nzone > 1 ) call mg_bintp_tur
 
             end if  ! end of des_eddy
 
@@ -307,12 +298,16 @@ subroutine mg_driver(iteraciontiempo)
             !if ( mod( itc+1 , 2 ) == 0 .and. call_solver_daf ) then
 
                 ! I set all the flow variables to zero within the air-phase               
-                q(1,:) = q(1,:) * rsign
-                q(2,:) = q(2,:) * rsign
-                q(3,:) = q(3,:) * rsign
-                q(4,:) = q(4,:) * rsign
-                q(5,:) = q(5,:) * rsign
-                                                   
+                !q(1,:) = q(1,:) * rsign
+                !q(2,:) = q(2,:) * rsign
+                !q(3,:) = q(3,:) * rsign
+                !q(4,:) = q(4,:) * rsign
+                !q(5,:) = q(5,:) * rsign
+               
+               do l = la,lb
+                  q(:,l) = rsign ( phi(l) ) * q(:,l)
+               end do
+
                ! We extrapolate the velocity and the pressure field using ghost fluid method
                call ghost_fluid_extrapolation( le_ia(n),le_ib(n)           , &
                                                le_ja(n),le_jb(n)           , &
@@ -328,9 +323,6 @@ subroutine mg_driver(iteraciontiempo)
                                                phi(la:lb)                  , &
                                                phi_n(la:lb)                , &
                                                phi_gradient(1:3, la:lb)    , &
-                                               h(la:lb)                    , &
-                                               hn(la:lb)                   , &
-                                               rsign(la:lb)                , &
                                                x(la:lb),y(la:lb),z(la:lb)    &
                                              )
 
@@ -340,8 +332,8 @@ subroutine mg_driver(iteraciontiempo)
 
                ! I clear up rsign and return it to 1 and 0 definition (in ghost_fluid_extrapolation
                ! I set the first layer of pressure extrapolated nodes to -1 for some operations )
-               rsign = zero
-               where ( phi > eps_sims ) rsign = one
+               !rsign = zero
+               !where ( phi > eps_sims ) rsign = one
 
                
             end if ! if ( call_solver_daf )
@@ -356,13 +348,10 @@ subroutine mg_driver(iteraciontiempo)
                             igp(n)       , jgp(n)   , kgp(n) , &
                             dc(n)        , de(n)    , dz(n)  , &
                             q(1:4,la:lb)                     , &
-                            csi(1:3,la:lb)                   , &
                             eta(1:3,la:lb)                   , &
-                            zet(1:3,la:lb)                   , &
                             aj(la:lb)                        , &
                             x(la:lb),y(la:lb),z(la:lb)       , &
                             xnut(la:lb)                      , &
-                            rsign(la:lb)                     , &
                             phi(la:lb)                         &
                            )
 
@@ -420,60 +409,19 @@ subroutine mg_driver(iteraciontiempo)
                                  zet(1:3,la:lb)                                        , & 
                                  aj(la:lb)                                             , & 
                                  xnut(la:lb)                                           , & 
-                                 pk(1:4,la:lb)                                         , & 
                                  rh(1:4,la:lb)                                         , & 
-                                 phi_n(la:lb), phi_static(la:lb), wd(la:lb)            , &
+                                 phi(la:lb)                                            , &
                                  phi_gradient(1:3, la:lb)                              , &
-                                 h(la:lb)                                              , &
                                  h_gradient(1:2, la:lb)                                , &
-                                 rsign(la:lb)                                          , & 
                                  x(la:lb),y(la:lb),z(la:lb)                            , &
                                  iteraciontiempo                                         &
                                )   
             
-
             end if ! if ( call_solver_daf )
-
-
-#ifdef DEBUG
-            call mg_cksum ('mg.daf-q', n, q)
-            call mg_cksum ('mg.daf-rh', n, rh)
-#endif
-
-               !==============================================================
-               ! FOR DARGAHI's CASE ONLY
-               ! WALL FUNCTIONS
-               !if (n == ns .and. myzone == 1 .and. myleft  == mpi_proc_null) &
-               !   call wf_eta (1)
-               !if (n == ns .and. myzone == 1 .and. myright == mpi_proc_null) &
-               !   call wf_eta (2)
-               
-               !if (n == ns .and. myzone == 6 .and. myleft  == mpi_proc_null) &
-               !   call wf_eta (1)
-               !if (n == ns .and. myzone == 6 .and. myright == mpi_proc_null) &
-               !   call wf_eta (2)
-               
-               !if (n == ns .and. myzone == 7 .and. myleft  == mpi_proc_null) &
-               !   call wf_eta (1)
-               !if (n == ns .and. myzone == 7 .and. myright == mpi_proc_null) &
-               !   call wf_eta (2)
-               
-               !==============================================================
-
-
-               ! boundary interpolation in overset grid
-      
-               if (n == ns .and. nzone > 1) then
-
-                  call mg_bintp_mom
-#ifdef DEBUG
-                  call mg_cksum ('mg.osg', n, q)
-#endif
-               end if
 
          end do ! itr
 
-         call mg_zero_pk_boundary (n, pk)
+         !call mg_zero_pk_boundary (n, pk)
 
       end do ! do n = ns, nstop
 
@@ -484,10 +432,6 @@ subroutine mg_driver(iteraciontiempo)
          ! prolong from coarse grid to fine grid
          ! 
          call mg_prolong (n)
-         !
-#ifdef DEBUG        
-         call mg_cksum ('mg.prolong', n, q)
-#endif
 
       end do
 
@@ -512,13 +456,10 @@ subroutine mg_driver(iteraciontiempo)
                       igp(n)       , jgp(n)   , kgp(n) , &
                       dc(n)        , de(n)    , dz(n)  , &
                       q(1:4,la:lb)                     , &
-                      csi(1:3,la:lb)                   , &
                       eta(1:3,la:lb)                   , &
-                      zet(1:3,la:lb)                   , &
                       aj(la:lb)                        , &
                       x(la:lb),y(la:lb),z(la:lb)       , &
                       xnut(la:lb)                      , &
-                      rsign(la:lb)                     , &
                       phi(la:lb)                         &
                      )
 
@@ -539,28 +480,8 @@ subroutine mg_driver(iteraciontiempo)
       !                  rsign(la:lb) ,                          &
       !                  q(1:4,la:lb) )
 
-      !call mg_exchng3_2d (n, q)			!me aseguro que los gp esten actualizados
-
-      !call bcond_obstacle(le_ia(n),le_ib(n),&
-      !                   le_ja(n),le_jb(n),&
-      !                   le_ka(n),le_kb(n),&
-      !                   q(1:4,la:lb))
-
-
-#ifdef DEBUG        
-      call mg_cksum ('mg.bc', n, q)
-#endif
-
-      ! boundary interpolation in overset grid
-      ! exchange ghost points for q
-      !
-      !call mg_exchng3_2d (n, q)
 
       if( nzone > 1 ) call mg_bintp_mom
-
-#ifdef DEBUG
-      call mg_cksum ('mg.osg', n, q)
-#endif
 
       ! check for convergence during this time step
       ! 
@@ -571,11 +492,15 @@ subroutine mg_driver(iteraciontiempo)
          ! If converged == true, I call gfm a last time to go into the level-set
          ! method with latest velocity field extrapolated to the ghost nodes
 
-         q(1,:) = q(1,:) * rsign
-         q(2,:) = q(2,:) * rsign
-         q(3,:) = q(3,:) * rsign
-         q(4,:) = q(4,:) * rsign
-         q(5,:) = q(5,:) * rsign
+         ! q(1,:) = q(1,:) * rsign
+         ! q(2,:) = q(2,:) * rsign
+         ! q(3,:) = q(3,:) * rsign
+         ! q(4,:) = q(4,:) * rsign
+         ! q(5,:) = q(5,:) * rsign
+
+         do l = la,lb
+            q(:,l) = rsign ( phi(l) ) * q(:,l)
+         end do
                                              
          ! We extrapolate the velocity and the pressure field using ghost fluid method
          call ghost_fluid_extrapolation( le_ia(n),le_ib(n)           , &
@@ -592,15 +517,12 @@ subroutine mg_driver(iteraciontiempo)
                                          phi(la:lb)                  , &
                                          phi_n(la:lb)                , &
                                          phi_gradient(1:3, la:lb)    , &
-                                         h(la:lb)                    , &
-                                         hn(la:lb)                   , &
-                                         rsign(la:lb)                , &
                                          x(la:lb),y(la:lb),z(la:lb)    &
                                        )
 
          ! Make sure rsign is properly defined before going to the level-set method
-         rsign = zero
-         where ( phi > eps_sims ) rsign = one
+         !rsign = zero
+         !where ( phi > eps_sims ) rsign = one
 
          ! I save xnut here to compute conver_real
          q(5,:) = xnut(:)
@@ -652,16 +574,14 @@ subroutine mg_driver(iteraciontiempo)
                            eta(1:3,la:lb)                         , & 
                            zet(1:3,la:lb)                         , &
                            aj(la:lb)                              , &
-                           phi(la:lb), phi_n(la:lb), rsign(la:lb) , &
-                           phi_gradient(1:3, la:lb)               , &
+                           phi(la:lb), phi_n(la:lb)               , &
                            x(la:lb),y(la:lb),z(la:lb)             , &
-                           epslsm, wd(la:lb)                      , &
                            iteraciontiempo                          &
                          )
     
    end if
 
-   if(MOD(iteraciontiempo,phi_outputiter) == 0 ) then
+   if( MOD( iteraciontiempo , phi_outputiter ) == 0 ) then
 
       write(debugname, fmt ='(a,i6.6)') 'phi',iteraciontiempo
       call outputD1_real(phi,debugname) 
@@ -856,101 +776,101 @@ contains
   end subroutine mg_zero_pk_boundary
 
 
-  subroutine calc_rsign ( il, iu        , &
-                          jl, ju        , &
-                          kl, ku        , &
-                          igp, jgp, kgp , &
-                          phi, rsign      &
-                        )
+!  subroutine calc_rsign ( il, iu        , &
+!                          jl, ju        , &
+!                          kl, ku        , &
+!                          igp, jgp, kgp , &
+!                          phi, rsign      &
+!                        )
+!
+!     integer, intent(in) :: il, iu, jl, ju, kl, ku
+!     integer, intent(in) :: igp , jgp , kgp
+!
+!     real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in)    :: phi     
+!     real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(inout) :: rsign 
+!
+!     integer :: ista, iend, jsta, jend, ksta, kend
+!     integer :: i,j,k
+!
+!     ista = il ; jsta = jl ; ksta = kl 
+!     iend = iu ; jend = ju ; kend = ku 
+!
+!     if (myback  == mpi_proc_null)  ista = il + igp 
+!     if (myleft  == mpi_proc_null)  jsta = jl + jgp 
+!     if (mydown  == mpi_proc_null)  ksta = kl + kgp 
+!
+!     if (myfront == mpi_proc_null)  iend = iu - igp
+!     if (myright == mpi_proc_null)  jend = ju - jgp
+!     if (myup    == mpi_proc_null)  kend = ku - kgp
+!
+!
+!     do i = ista, iend
+!     do j = jsta, jend
+!     do k = ksta, kend
+!
+!         rsign(i,j,k) = ( sign( one , phi(i,j,k) - eps_sims ) + one ) / two
+!
+!     end do
+!     end do
+!     end do
+!
+!  end subroutine calc_rsign
 
-     integer, intent(in) :: il, iu, jl, ju, kl, ku
-     integer, intent(in) :: igp , jgp , kgp
-
-     real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in)    :: phi     
-     real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(inout) :: rsign 
-
-     integer :: ista, iend, jsta, jend, ksta, kend
-     integer :: i,j,k
-
-     ista = il ; jsta = jl ; ksta = kl 
-     iend = iu ; jend = ju ; kend = ku 
-
-     if (myback  == mpi_proc_null)  ista = il + igp 
-     if (myleft  == mpi_proc_null)  jsta = jl + jgp 
-     if (mydown  == mpi_proc_null)  ksta = kl + kgp 
-
-     if (myfront == mpi_proc_null)  iend = iu - igp
-     if (myright == mpi_proc_null)  jend = ju - jgp
-     if (myup    == mpi_proc_null)  kend = ku - kgp
-
-
-     do i = ista, iend
-     do j = jsta, jend
-     do k = ksta, kend
-
-         rsign(i,j,k) = ( sign( one , phi(i,j,k) - eps_sims ) + one ) / two
-
-     end do
-     end do
-     end do
-
-  end subroutine calc_rsign
-
-  subroutine rsign_blanking ( il, iu        , &
-                              jl, ju        , &
-                              kl, ku        , &
-                              igp, jgp, kgp , &
-                              rsign           &
-                            )
-
-
-
-     ! This routine set rsign to zero within the blanking regions
-     integer, intent(in) :: il, iu, jl, ju, kl, ku
-     integer, intent(in) :: igp , jgp , kgp
-
-     real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(inout) :: rsign 
-
-     integer :: ista, iend, jsta, jend, ksta, kend
-     integer :: i,j,k
-
-     ista = il ; jsta = jl ; ksta = kl 
-     iend = iu ; jend = ju ; kend = ku 
-
-     if (myback  == mpi_proc_null)  ista = il + igp 
-     if (myleft  == mpi_proc_null)  jsta = jl + jgp 
-     if (mydown  == mpi_proc_null)  ksta = kl + kgp 
-
-     if (myfront == mpi_proc_null)  iend = iu - igp
-     if (myright == mpi_proc_null)  jend = ju - jgp
-     if (myup    == mpi_proc_null)  kend = ku - kgp
-
-     if ( nblke == 0 ) return
-
-     do i = ista, iend
-     do j = jsta, jend
-     do k = ksta, kend
-
-         do nb = 1,nblke
-            
-            ! We allow rsign to be 1 on the blanking region, because
-            ! phi and velocity/pressure values on the obstacles are
-            ! valid entries
-            if ( i > le_blk_ia(1,nb) .and. i < le_blk_ib(1,nb) .and. & 
-                 j > le_blk_ja(1,nb) .and. j < le_blk_jb(1,nb) .and. &
-                 k > le_blk_ka(1,nb) .and. k < le_blk_kb(1,nb) ) then
-
-                 rsign(i,j,k) = zero
-      
-            end if
-
-         end do  
-
-     end do
-     end do
-     end do
-
-  end subroutine rsign_blanking
+!  subroutine rsign_blanking ( il, iu        , &
+!                              jl, ju        , &
+!                              kl, ku        , &
+!                              igp, jgp, kgp , &
+!                              rsign           &
+!                            )
+!
+!
+!
+!     ! This routine set rsign to zero within the blanking regions
+!     integer, intent(in) :: il, iu, jl, ju, kl, ku
+!     integer, intent(in) :: igp , jgp , kgp
+!
+!     real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(inout) :: rsign 
+!
+!     integer :: ista, iend, jsta, jend, ksta, kend
+!     integer :: i,j,k
+!
+!     ista = il ; jsta = jl ; ksta = kl 
+!     iend = iu ; jend = ju ; kend = ku 
+!
+!     if (myback  == mpi_proc_null)  ista = il + igp 
+!     if (myleft  == mpi_proc_null)  jsta = jl + jgp 
+!     if (mydown  == mpi_proc_null)  ksta = kl + kgp 
+!
+!     if (myfront == mpi_proc_null)  iend = iu - igp
+!     if (myright == mpi_proc_null)  jend = ju - jgp
+!     if (myup    == mpi_proc_null)  kend = ku - kgp
+!
+!     if ( nblke == 0 ) return
+!
+!     do i = ista, iend
+!     do j = jsta, jend
+!     do k = ksta, kend
+!
+!         do nb = 1,nblke
+!            
+!            ! We allow rsign to be 1 on the blanking region, because
+!            ! phi and velocity/pressure values on the obstacles are
+!            ! valid entries
+!            if ( i > le_blk_ia(1,nb) .and. i < le_blk_ib(1,nb) .and. & 
+!                 j > le_blk_ja(1,nb) .and. j < le_blk_jb(1,nb) .and. &
+!                 k > le_blk_ka(1,nb) .and. k < le_blk_kb(1,nb) ) then
+!
+!                 rsign(i,j,k) = zero
+!      
+!            end if
+!
+!         end do  
+!
+!     end do
+!     end do
+!     end do
+!
+!  end subroutine rsign_blanking
 
 end subroutine mg_driver
 

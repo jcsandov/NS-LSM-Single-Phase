@@ -7,13 +7,10 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                       kgp   ,               & 
                       dc    ,  de  ,  dz ,  &
                       q     ,               & 
-                      csi   ,               &                                   
                       eta   ,               &                                   
-                      zet   ,               &
                       aj    ,               &                                   
                       x     ,  y  ,   z  ,  &                                   
                       xnut  ,               &          
-                      rsign              ,  &
                       phi                   &
                      )
 
@@ -29,6 +26,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
    use global_app
    use global_mpi
    use global_param
+   use global_lsm, only : BigPhi
 
    implicit none
   
@@ -51,7 +49,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
    ! 
    real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku) :: q
    real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(inout) ::  xnut
-   real (kind = rdf), dimension(1:3,il:iu,jl:ju,kl:ku), intent(in) :: csi,eta,zet
+   real (kind = rdf), dimension(1:3,il:iu,jl:ju,kl:ku), intent(in) :: eta
    real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)    , intent(in) :: aj
    real (kind = rdf), dimension(il:iu,jl:ju,kl:ku)    , intent(in) :: x,y,z
    real (kind = rdf) :: dc , de , dz
@@ -62,11 +60,9 @@ subroutine bcond_fm ( il    ,  iu        ,  &
    real (kind = rdf) :: itpa , itpb ! first and second nodes
    real (kind = rdf) :: exsign
 
-   ! solid wall flag
-   logical, parameter :: solid_wall_blanking = .true.
 
    ! flag variable to identify air or water phase
-   real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in) ::  rsign
+   !real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in) ::  rsign
 
    ! flag variable to identify air or water phase
    real (kind = rdf), dimension(il:iu,jl:ju,kl:ku) , intent(in) ::  phi
@@ -217,10 +213,10 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                !q(2:4,i,j,k) = (one + rat(j,k,b)) * q(2:4,i+1,j,k) - &
                !                      rat(j,k,b)  * q(2:4,i+2,j,k)    
 
-               phase_extp =   rsign(i+1,j,k) * rsign(i+2,j,k) 
+               phase_extp =   rsign( phi(i+1,j,k) ) * rsign( phi(i+2,j,k) ) 
 
-               phase_vert =   rsign(i,j,max( k-1 , k_mysta )) & 
-                            * rsign(i,j,max( k-2 , k_mysta )) 
+               phase_vert =   rsign( phi(i,j,max( k-1 , k_mysta )) ) & 
+                            * rsign( phi(i,j,max( k-2 , k_mysta )) ) 
 
                ! Slip-walls --> zero shear --> ∂ / ∂ξ = 0
                q(2:4,i,j,k) = sa(2:4,b) * q(2:4,i+1,j,k) + &
@@ -245,8 +241,8 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                ! If the node is in the air-phase, I don't change it because
                ! it was extrapolated in the pressure_extrapolation()
                ! routine
-               q(1,i,j,k) = ( one - rsign(i,j,k) ) * q(1,i,j,k) + &
-                                    rsign(i,j,k)   * paux
+               q(1,i,j,k) = ( one - rsign(  phi(i,j,k) ) ) * q(1,i,j,k) + &
+                                    rsign(  phi(i,j,k) )   * paux
 
                ! non-penetration BC
                q(2,i,j,k) = zero
@@ -298,14 +294,14 @@ subroutine bcond_fm ( il    ,  iu        ,  &
          do k = k_mysta , k_myend
          do j = j_mysta , j_myend
                
-            if( rsign(i,j,k) > one_half ) then
+            !if( rsign(i,j,k) > one_half ) then
                
                !q(1,i,j,k) = (one + rat(j,k,b)) * q(1,i-1,j,k) - &
                !                    rat(j,k,b)  * q(1,i-2,j,k)
                !q(1,i,j,k) = sa(1,b) * q(1,i-1,j,k) + &
                !             sb(1,b) * q(1,i-2,j,k)
             
-            end if
+            !end if
 
          end do
          end do
@@ -330,11 +326,11 @@ subroutine bcond_fm ( il    ,  iu        ,  &
          do k = k_mysta , k_myend
          do j = j_mysta , j_myend
 
-            if( rsign(i,j,k) > one_half ) then
+            !if( rsign(i,j,k) > one_half ) then
 
                q(1:4,i,j,k) = q(1:4,i_mysta,j,k)
             
-            end if
+            !end if
          
          end do
          end do
@@ -373,10 +369,10 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                
                !q(2:4,i,j,k) = (one + rat(j,k,b)) * q(2:4,i-1,j,k) - &
                !                      rat(j,k,b)  * q(2:4,i-2,j,k)    
-               phase_extp =   rsign(i-1,j,k) * rsign(i-2,j,k) 
+               phase_extp =   rsign( phi(i-1,j,k) ) * rsign( phi(i-2,j,k) ) 
 
-               phase_vert =   rsign(i,j,max( k-1 , k_mysta )) & 
-                            * rsign(i,j,max( k-2 , k_mysta )) 
+               phase_vert =   rsign( phi( i,j,max( k-1 , k_mysta )) ) & 
+                            * rsign( phi( i,j,max( k-2 , k_mysta )) ) 
 
 
                ! Slip-walls --> zero shear --> ∂ / ∂ξ = 0
@@ -401,8 +397,8 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                ! If the node is in the air-phase, I don't change it because
                ! it was extrapolated in the pressure_extrapolation()
                ! routine
-               q(1,i,j,k) = ( one - rsign(i,j,k) ) * q(1,i,j,k) + &
-                                    rsign(i,j,k)   * paux
+               q(1,i,j,k) = ( one - rsign( phi(i,j,k) ) ) * q(1,i,j,k) + &
+                                    rsign( phi(i,j,k) )   * paux
 
                ! non-penetration BC
                q(2,i,j,k) = zero
@@ -541,10 +537,10 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                !q(2:4,i,j,k) = (one + rat(j,k,b)) * q(2:4,i,j+1,k) - &
                !                      rat(j,k,b)  * q(2:4,i,j+2,k)    
 
-               phase_extp =   rsign(i,j+1,k) * rsign(i,j+2,k) 
+               phase_extp =   rsign( phi(i,j+1,k) ) * rsign( phi(i,j+2,k) ) 
 
-               phase_vert =   rsign(i,j,max( k-1 , k_mysta )) & 
-                            * rsign(i,j,max( k-2 , k_mysta )) 
+               phase_vert =   rsign( phi(i,j,max( k-1 , k_mysta )) ) & 
+                            * rsign( phi(i,j,max( k-2 , k_mysta )) ) 
 
                ! Slip-walls --> zero shear --> ∂ / ∂η = 0
                q(2:4,i,j,k) = sa(2:4,b) * q(2:4,i,j+1,k) + &
@@ -568,8 +564,8 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                ! If the node is in the air-phase, I don't change it because
                ! it was extrapolated in the pressure_extrapolation()
                ! routine
-               q(1,i,j,k) = ( one - rsign(i,j,k) ) * q(1,i,j,k) + &
-                                    rsign(i,j,k)   * paux
+               q(1,i,j,k) = ( one - rsign( phi(i,j,k) ) ) * q(1,i,j,k) + &
+                                    rsign( phi(i,j,k) )   * paux
 
                ! non-penetration BC
                q(3,i,j,k) = zero
@@ -659,7 +655,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
          do k = k_mysta , k_myend
          do i = i_mysta , i_myend
 
-            if( rsign(i,j,k) > one_half ) then            
+            !if( rsign(i,j,k) > one_half ) then            
                
                q(1,i,j,k) = (one + rat(i,k,b)) * q(1,i,j-1,k) - &
                                    rat(i,k,b)  * q(1,i,j-2,k)
@@ -667,7 +663,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                !q(1,i,j,k) = sa(1,b) * q(1,i,j-1,k) + &
                !             sb(1,b) * q(1,i,j-2,k)
             
-            end if
+            !end if
 
          end do
          end do
@@ -679,11 +675,11 @@ subroutine bcond_fm ( il    ,  iu        ,  &
          do k = k_mysta , k_myend
          do i = i_mysta , i_myend
 
-            if( rsign(i,j,k) > one_half ) then
+            !if( rsign(i,j,k) > one_half ) then
                
                q(1:4,i,j,k) = q(1:4,i,j_mysta,k)
             
-            end if
+            !end if
             
          end do
          end do
@@ -704,10 +700,10 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                q(2:4,i,j,k) = sa(2:4,b) * q(2:4,i,j-1,k) + &
                               sb(2:4,b) * q(2:4,i,j-2,k)    
 
-               phase_extp =   rsign(i,j-1,k) * rsign(i,j-2,k) 
+               phase_extp =   rsign( phi(i,j-1,k) ) * rsign( phi(i,j-2,k) ) 
 
-               phase_vert =   rsign(i,j,max( k-1 , k_mysta )) & 
-                            * rsign(i,j,max( k-2 , k_mysta )) 
+               phase_vert =   rsign( phi(i,j,max( k-1 , k_mysta )) ) & 
+                            * rsign( phi(i,j,max( k-2 , k_mysta )) ) 
 
 
                !paux_extp = (one + rat(j,k,b)) * q(1,i,j-1,k) - &
@@ -728,8 +724,8 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                ! If the node is in the air-phase, I don't change it because
                ! it was extrapolated in the pressure_extrapolation()
                ! routine
-               q(1,i,j,k) = ( one - rsign(i,j,k) ) * q(1,i,j,k) + &
-                                    rsign(i,j,k)   * paux
+               q(1,i,j,k) = ( one - rsign( phi(i,j,k) ) ) * q(1,i,j,k) + &
+                                    rsign( phi(i,j,k) )   * paux
 
                ! non-penetration BC
                q(3,i,j,k) = zero
@@ -785,7 +781,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
          do j = j_mysta , j_myend
          do i = i_mysta , i_myend
 
-            if( rsign(i,j,k) > one_half ) then
+            !if( rsign(i,j,k) > one_half ) then
             
                q(1,i,j,k) = (one + rat(i,j,b)) * q(1,i,j,k+1) - &
                                    rat(i,j,b)  * q(1,i,j,k+2)
@@ -793,7 +789,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                !q(1,i,j,k) = sa(1,b) * q(1,i,j,k+1) + &
                !             sb(1,b) * q(1,i,j,k+2)
             
-            end if
+            !end if
 
          end do
          end do
@@ -805,11 +801,11 @@ subroutine bcond_fm ( il    ,  iu        ,  &
          do j = j_mysta , j_myend
          do i = i_mysta , i_myend
                
-            if( rsign(i,j,k) > one_half ) then
+            !if( rsign(i,j,k) > one_half ) then
                
                q(1:4,i,j,k) = q(1:4,i,j,k_myend)
             
-            end if
+            !end if
          
          end do
          end do
@@ -827,10 +823,10 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                q(2:4,i,j,k) = sa(2:4,b) * q(2:4,i,j,k+1) + &
                               sb(2:4,b) * q(2:4,i,j,k+2)    
 
-               phase_extp =   rsign(i,j,k+1) * rsign(i,j,k+2) 
+               phase_extp =   rsign( phi(i,j,k+1) ) * rsign( phi(i,j,k+2) ) 
 
-               phase_vert =   rsign(i,j,max( k-1 , k_mysta )) & 
-                            * rsign(i,j,max( k-2 , k_mysta )) 
+               phase_vert =   rsign( phi(i,j,max( k-1 , k_mysta )) )& 
+                            * rsign( phi(i,j,max( k-2 , k_mysta )) )
 
 
                !paux_extp = (one + rat(j,k,b)) * q(1,i,j,k+1) - &
@@ -851,8 +847,8 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                ! If the node is in the air-phase, I don't change it because
                ! it was extrapolated in the pressure_extrapolation()
                ! routine
-               q(1,i,j,k) = ( one - rsign(i,j,k) ) * q(1,i,j,k) + &
-                                    rsign(i,j,k)   * paux
+               q(1,i,j,k) = ( one - rsign( phi(i,j,k) ) ) * q(1,i,j,k) + &
+                                    rsign( phi(i,j,k) )   * paux
 
                ! non-penetration BC
                !q(3,i,j,k) = zero
@@ -906,7 +902,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
          do j = j_mysta , j_myend
          do i = i_mysta , i_myend
                
-            if( rsign(i,j,k) > one_half ) then
+            !if( rsign(i,j,k) > one_half ) then
                
                q(1,i,j,k) = (one + rat(i,j,b)) * q(1,i,j,k-1) - &
                                    rat(i,j,b)  * q(1,i,j,k-2)
@@ -914,7 +910,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
                !q(1,i,j,k) = sa(1,b) * q(1,i,j,k-1) + &
                !             sb(1,b) * q(1,i,j,k-2)
             
-            end if
+            !end if
          
          end do
          end do
@@ -926,11 +922,11 @@ subroutine bcond_fm ( il    ,  iu        ,  &
          do j = j_mysta , j_myend
          do i = i_mysta , i_myend
                
-            if( rsign(i,j,k) > one_half ) then
+            !if( rsign(i,j,k) > one_half ) then
                
                q(1:4,i,j,k) = q(1:4,i,j,k_mysta)
             
-            end if
+            !end if
 
          end do
          end do
@@ -1034,7 +1030,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
             do j = max( j_mysta , li_blk_ja(n,nb) ) , min( j_myend , li_blk_jb(n,nb) ) 
 
                ! either 1 or 0
-               exsign = ( one + sign( one , abs( phi(i-2,j,k) )- five ) )/two
+               exsign = ( one + sign( one , abs( phi(i-2,j,k) ) - BigPhi ) )/two
 
                itpa = itp2ndOrd_a + exsign * ( itp1stOrd_a - itp2ndOrd_a )
                itpb = itp2ndOrd_b + exsign * ( itp1stOrd_b - itp2ndOrd_b )
@@ -1063,7 +1059,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
             do j = max( j_mysta , li_blk_ja(n,nb) ) , min( j_myend , li_blk_jb(n,nb) ) 
 
                ! either 1 or 0
-               exsign = ( one + sign( one , abs( phi(i+2,j,k) )-five ) )/two
+               exsign = ( one + sign( one , abs( phi(i+2,j,k) )- BigPhi ) )/two
 
                itpa = itp2ndOrd_a + exsign * ( itp1stOrd_a - itp2ndOrd_a )
                itpb = itp2ndOrd_b + exsign * ( itp1stOrd_b - itp2ndOrd_b )
@@ -1092,7 +1088,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
             do i = max( i_mysta , li_blk_ia(n,nb) ) , min( i_myend , li_blk_ib(n,nb) ) 
 
                ! either 1 or 0
-               exsign = ( one + sign( one , abs( phi(i,j-2,k) )-five ) )/two
+               exsign = ( one + sign( one , abs( phi(i,j-2,k) )- BigPhi ) )/two
 
                itpa = itp2ndOrd_a + exsign * ( itp1stOrd_a - itp2ndOrd_a )
                itpb = itp2ndOrd_b + exsign * ( itp1stOrd_b - itp2ndOrd_b )
@@ -1121,7 +1117,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
             do i = max( i_mysta , li_blk_ia(n,nb) ) , min( i_myend , li_blk_ib(n,nb) ) 
 
                ! either 1 or 0
-               exsign = ( one + sign( one , abs( phi(i,j+2,k) )-five ) )/two
+               exsign = ( one + sign( one , abs( phi(i,j+2,k) )- BigPhi ) )/two
 
                itpa = itp2ndOrd_a + exsign * ( itp1stOrd_a - itp2ndOrd_a )
                itpb = itp2ndOrd_b + exsign * ( itp1stOrd_b - itp2ndOrd_b )
@@ -1155,7 +1151,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
             do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
 
                ! either 1 or 0
-               exsign = ( one + sign( one , abs( phi(i-2,j-2,k) )-five ) )/two
+               exsign = ( one + sign( one , abs( phi(i-2,j-2,k) )- BigPhi ) )/two
 
                itpa = itp2ndOrd_a + exsign * ( itp1stOrd_a - itp2ndOrd_a )
                itpb = itp2ndOrd_b + exsign * ( itp1stOrd_b - itp2ndOrd_b )
@@ -1187,7 +1183,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
             do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
 
                ! either 1 or 0
-               exsign = ( one + sign( one , abs( phi(i+2,j-2,k) )-five ) )/two
+               exsign = ( one + sign( one , abs( phi(i+2,j-2,k) )- BigPhi ) )/two
 
                itpa = itp2ndOrd_a + exsign * ( itp1stOrd_a - itp2ndOrd_a )
                itpb = itp2ndOrd_b + exsign * ( itp1stOrd_b - itp2ndOrd_b )
@@ -1218,7 +1214,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
             do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
 
                ! either 1 or 0
-               exsign = ( one + sign( one , abs( phi(i+2,j+2,k) )-five ) )/two
+               exsign = ( one + sign( one , abs( phi(i+2,j+2,k) )-BigPhi ) )/two
 
                itpa = itp2ndOrd_a + exsign * ( itp1stOrd_a - itp2ndOrd_a )
                itpb = itp2ndOrd_b + exsign * ( itp1stOrd_b - itp2ndOrd_b )
@@ -1250,7 +1246,7 @@ subroutine bcond_fm ( il    ,  iu        ,  &
             do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
 
                ! either 1 or 0
-               exsign = ( one + sign( one , abs( phi(i-2,j+2,k) )-five ) )/two
+               exsign = ( one + sign( one , abs( phi(i-2,j+2,k) ) - BigPhi ) )/two
 
                itpa = itp2ndOrd_a + exsign * ( itp1stOrd_a - itp2ndOrd_a )
                itpb = itp2ndOrd_b + exsign * ( itp1stOrd_b - itp2ndOrd_b )
