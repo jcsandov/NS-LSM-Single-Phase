@@ -1417,9 +1417,9 @@ contains
             blk_ka = max( ge_ka(1) , blanking( 3 , blka , myzone ) )
             blk_kb = min( ge_kb(1) , blanking( 3 , blkb , myzone ) )
 
-            ge_blk_ia ( 1 , nblk ) = blk_ia  ;  ge_blk_ib ( 1 , nblk ) = blk_ib
-            ge_blk_ja ( 1 , nblk ) = blk_ja  ;  ge_blk_jb ( 1 , nblk ) = blk_jb
-            ge_blk_ka ( 1 , nblk ) = blk_ka  ;  ge_blk_kb ( 1 , nblk ) = blk_kb
+            ge_blk_ia ( 1 , nblke ) = blk_ia  ;  ge_blk_ib ( 1 , nblke ) = blk_ib
+            ge_blk_ja ( 1 , nblke ) = blk_ja  ;  ge_blk_jb ( 1 , nblke ) = blk_jb
+            ge_blk_ka ( 1 , nblke ) = blk_ka  ;  ge_blk_kb ( 1 , nblke ) = blk_kb
 
 
             ! on the coarse grids

@@ -405,7 +405,7 @@ subroutine rhs_diag_solver ()
 
             do nb = 1 , nblke
 
-               if ( j >= li_blk_ja(1,nb) .and. j<=li_blk_jb(1,nb) ) then
+               if ( j >= le_blk_ja(1,nb) .and. j<=le_blk_jb(1,nb) ) then
                   
                   if ( le_blk_ia(1,nb) == iend-1 ) then
 
@@ -825,9 +825,9 @@ subroutine rhs_diag_solver ()
          ! The blanking node is one node away from the exterior nodes limit         
          if ( nblke /= 0 ) then
 
-            do nb = 1 , nblk
+            do nb = 1 , nblke
 
-               if ( i >= li_blk_ia(1,nb) .and. i<=li_blk_ib(1,nb) ) then
+               if ( i >= le_blk_ia(1,nb) .and. i<=le_blk_ib(1,nb) ) then
                   
                   if ( le_blk_ja(1,nb) == jend-1 ) then
                   
