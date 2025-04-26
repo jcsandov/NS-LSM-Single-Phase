@@ -12,7 +12,7 @@ subroutine ghost_fluid_extrapolation( il,iu          , &
                                       phi            , & 
                                       phi_n          , & 
                                       phi_gradient   , & 
-                                      x,y,z            &                                    
+                                      x,y,z            &                      
                                     )
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -65,6 +65,7 @@ real (kind = rdf), dimension(1:3,il:iu,jl:ju,kl:ku) , intent(in)    :: phi_gradi
 
 ! In-out arguments. q vector is modified in its velocity components
 real (kind = rdf), dimension(1:4,il:iu,jl:ju,kl:ku), intent(inout) :: q
+
 
 !DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
 !
@@ -119,6 +120,7 @@ real (kind = rdf), dimension(1:3) :: alpha_vec ! position vectorsto the fs
 real (kind = rdf), dimension(1:3) :: alpha_vec_extp ! position vectors from the extrapolation 
                                                     ! node to the fs
 real (kind = rdf) :: xs, ys, zs ! free-surface location coordinates
+real (kind = rdf) :: deltax, deltay, deltaz 
 integer :: m,n,l ! work arrays indexes
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -138,7 +140,7 @@ integer :: ii,jj,kk ! indexes for lsqm
 integer :: inearest,jnearest,knearest ! indexes identify local neasrest node to the free-surface 
 integer :: ivs,jvs,kvs, p, coeff_loop ! indexes for Tt, Ts, Bt, Bs, A - vector-system
 integer :: ims,jms,kms ! indexes for T, B, A - matrix-system
-integer :: cont ! auxiliar variable
+integer :: cont , contp ! auxiliar counting variables
 integer :: col, row ! auxiliar variable
 real (kind = rdf), dimension(1:3,1:3) :: du_dx_fs_lsqm ! velocity gradient at the
                                                        ! free-surface
@@ -146,21 +148,27 @@ real (kind = rdf), dimension(1:3,1:3) :: du_dx_fs_lsqm ! velocity gradient at th
 real (kind = rdf), dimension(1:3) :: dp_dx_fs_lsqm ! pressure gradient at the
                                                    ! free-surface
 
+real (kind = rdf), dimension(1:3) :: pgrad_nearest_point ! pressure gradient at the
+                                                         ! nearest point to the free-surface
+
 real (kind = rdf), dimension(1:3) :: u_fs_lsqm ! velocity at the
                                                ! free-surface
 
-! Big arrays will be allocatables (I allocate memory when I use them only)
-
+! Velocity gradient extrapolation arrays
 real (kind = rdf), dimension(:,:), allocatable   :: t_matrix_system
 real (kind = rdf), dimension(:)  , allocatable   :: a_coeff_vector
 real (kind = rdf), dimension(:)  , allocatable   :: b_matrix_system
+
+! Pressure SVD system
+real (kind = rdf), dimension(:,:), allocatable   :: Ap
+real (kind = rdf), dimension(:)  , allocatable   :: bpa , bpb
+
 
 real (kind = rdf) :: weight
 real (kind = rdf) :: xnut_fs
 
 
 ! continuity correction
-
 real (kind = rdf) :: coc ! velocity divergence
 integer :: icoc
 
@@ -203,28 +211,24 @@ logical :: BlankingFlag
 integer, parameter :: mmsu = 57 ! 2 * 27 + 3 * continuity = 57
 integer, parameter :: nmsu = 27
 
-integer, parameter :: mmsp = 32
-integer, parameter :: nmsp = 12
+integer  :: mmsp 
+integer  :: nmsp 
 
 ! SGELSD
 integer :: info, rank
-integer :: nlvlu, lworku, liworku
-
 
 integer, parameter :: smlsiz=25
 integer, parameter :: nrhs=1
 
-real(kind = rdf), dimension(:), allocatable :: iworku , worku
-real(kind = rdf), dimension(:), allocatable :: iworkp , workp
+integer :: lda , ldb, nlvl, lwork, liwork
 
-integer, parameter:: ldau=max(1,mmsu)
+real(kind = rdf) , dimension(:) , allocatable :: s , work  
+integer , dimension(:) , allocatable :: iwork 
 
-integer, parameter:: ldbu=max(1,max(mmsu,nmsu))
+real(kind = rdf), parameter:: rcondu = 0.00001_rdf
+real(kind = rdf), parameter:: rcondp = 0.00000001_rdf
 
 real(kind = rdf) :: ersvdm !!,sm,res,resf
-real(kind = rdf) :: su(min(mmsu,nmsu)) 
-
-real(kind = rdf), parameter:: rcond = 0.00001_rdf
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 !list variables
@@ -242,16 +246,16 @@ external:: dgelsd , sgelsd , ilaenv
 ! https://extras.csc.fi/math/nag/mark21/pdf/F08/f08kcf.pdf
 ! (don't modify if not necessary)
 
-nlvlu = max(0,int( log(real(min(mmsu,nmsu))/real(smlsiz+1))/log(2.) )+1)
-if(mmsu.ge.nmsu) then      
-  lworku  = 12*nmsu+2*nmsu*smlsiz+8*nmsu*nlvlu+ nmsu*nrhs+(smlsiz+1)*(smlsiz+1)
-else
-  lworku  = 12*mmsu+2*mmsu*smlsiz+8*mmsu*nlvlu+ mmsu*nrhs+(smlsiz+1)*(smlsiz+1)
-end if
+!nlvlu = max(0,int( log(real(min(mmsu,nmsu))/real(smlsiz+1))/log(2.) )+1)
+!if( mmsu >= nmsu ) then      
+!  lworku  = 12*nmsu+2*nmsu*smlsiz+8*nmsu*nlvlu+ nmsu*nrhs+(smlsiz+1)*(smlsiz+1)
+!else
+!  lworku  = 12*mmsu+2*mmsu*smlsiz+8*mmsu*nlvlu+ mmsu*nrhs+(smlsiz+1)*(smlsiz+1)
+!end if
 
-liworku = max(1,3*min(mmsu,nmsu)*nlvlu+11*min(mmsu,nmsu))
+!liworku = max(1,3*min(mmsu,nmsu)*nlvlu+11*min(mmsu,nmsu))
 
-allocate(worku(max(1,lworku)) , iworku(max(1,liworku)))
+!allocate(worku(max(1,lworku)) , iworku(max(1,liworku)))
 
 
 ! ----------------------------------------------------------------------------------
@@ -532,6 +536,16 @@ do g = 1, gfmnodes
   
   max_vel_norm_neighbour = zero
   
+  ! pressure matrix counter initialisation
+  contp = 0
+
+  ! pressure matrix and vectors allocate. The size spans the whole
+  ! range of nodes to be explored for extrapolation. The actual number
+  ! of entries is gonna be stored in contp
+  allocate( Ap ( (ip-im+1) * (jp-jm+1) * (kp-km+1)   , 3) )
+  allocate( bpa( (ip-im+1) * (jp-jm+1) * (kp-km+1) ) , &
+            bpb( (ip-im+1) * (jp-jm+1) * (kp-km+1) ) )
+
   do kk = km , kp
   do jj = jm , jp
   do ii = im , ip
@@ -867,6 +881,24 @@ do g = 1, gfmnodes
                                        + weight * alpha_local(icoc) * alpha_local(3)
     end do
 
+    !-------------------------------------------------------------------------------
+    ! pressure extrapolation matrix construction
+    !-------------------------------------------------------------------------------
+
+    contp = contp + 1
+
+    deltax = xs - x(ii,jj,kk)
+    deltay = ys - y(ii,jj,kk)
+    deltaz = zs - z(ii,jj,kk)
+
+    ! A matrix entries
+    Ap(contp,1) = weight * deltax 
+    Ap(contp,2) = weight * deltay 
+    Ap(contp,3) = weight * deltaz 
+    
+    ! b vector entries
+    bpa(contp)  =  weight
+    bpb(contp)  = -weight * q(1,ii,jj,kk)
 
   end do ! ii
   end do ! jj
@@ -893,11 +925,13 @@ do g = 1, gfmnodes
   ! A : a_coeff_vector
   !----------------------------------------------------------------------
 
-  su  = zero ! sgelsd output parameter
+  call set_svd_parameters( mmsu , nmsu )
 
   call dgelsd ( mmsu, nmsu, nrhs, t_matrix_system,           &
-                ldau, b_matrix_system, ldbu, su, rcond, rank, &
-                worku, lworku, iworku, info )
+                lda, b_matrix_system, ldb, s , rcondu, rank, &
+                work, lwork , iwork, info )
+
+  deallocate ( s , work , iwork )
 
   ! We assign the A vector (a_ij coeffs) with the solution of SVD 
   ! system overwritten to b_matrix_system
@@ -940,10 +974,58 @@ do g = 1, gfmnodes
 
   ! With the pressure at the fs from the NDBC, I compute the pressure gradient at the 
   ! free surface using a Weighted Least Square Method
-  dp_dx_fs_lsqm = zero
-  call free_surface_pressure_gradient( i , j , k , xs, ys, zs, pfs , nvec , dp_dx_fs_lsqm )
+  ! dp_dx_fs_lsqm = zero
+  ! call free_surface_pressure_gradient( i , j , k , xs, ys, zs, pfs , nvec , dp_dx_fs_lsqm )
 
+  ! I redefine the rhs pressure vector and store it in bpa
+  bpa = pfs * bpa + bpb
   
+  ! SVD method parameters
+  mmsp = contp
+  nmsp = 3
+  
+  call set_svd_parameters( mmsp , nmsp )
+
+  call dgelsd ( mmsp, nmsp , nrhs , Ap(1:contp,:), &
+                lda , bpa(1:contp) , ldb, s, rcondp, rank, &
+                work, lwork, iwork, info )
+
+  deallocate ( s , work , iwork )
+
+  if ( info == 0 ) then
+
+    dp_dx_fs_lsqm(1:3) = bpa(1:3)
+
+  else
+
+    print *, 'problem inverting the pressure SVD matrix in WLSM at node: ',myid,i,j,k
+
+    call pressure_curv_gradient_vector( inearest, jnearest, knearest, &
+                                        pgrad_nearest_point, exsign)
+
+    ! ∂p      ∂p   ∂ξ     ∂p   ∂η     ∂p   ∂ζ 
+    !---- =  ---- ---- + ---- ---- + ---- ----   
+    ! ∂x      ∂ξ   ∂x     ∂η   ∂x     ∂ζ   ∂x 
+    dp_dx_fs_lsqm(1) = pgrad_nearest_point(1) * csi(1,inearest,jnearest,knearest) + &
+                       pgrad_nearest_point(2) * eta(1,inearest,jnearest,knearest) + &
+                       pgrad_nearest_point(3) * zet(1,inearest,jnearest,knearest)
+    
+    ! ∂p      ∂p   ∂ξ     ∂p   ∂η     ∂p   ∂ζ 
+    !---- =  ---- ---- + ---- ---- + ---- ----   
+    ! ∂y      ∂ξ   ∂y     ∂η   ∂y     ∂ζ   ∂y 
+    dp_dx_fs_lsqm(2) = pgrad_nearest_point(1) * csi(2,inearest,jnearest,knearest) + &
+                       pgrad_nearest_point(2) * eta(2,inearest,jnearest,knearest) + &
+                       pgrad_nearest_point(3) * zet(2,inearest,jnearest,knearest)
+    
+    ! ∂p      ∂p   ∂ξ     ∂p   ∂η     ∂p   ∂ζ 
+    !---- =  ---- ---- + ---- ---- + ---- ----   
+    ! ∂z      ∂ξ   ∂z     ∂η   ∂z     ∂ζ   ∂z 
+    dp_dx_fs_lsqm(3) = pgrad_nearest_point(1) * csi(3,inearest,jnearest,knearest) + &
+                       pgrad_nearest_point(2) * eta(3,inearest,jnearest,knearest) + &
+                       pgrad_nearest_point(3) * zet(3,inearest,jnearest,knearest)
+
+  end if
+
   !---------------------------------------------------
   ! Velocity extrapolation to the free-surface
   !---------------------------------------------------
@@ -986,6 +1068,7 @@ do g = 1, gfmnodes
 
   ! deallocate big arrays
   deallocate( t_matrix_system   , a_coeff_vector   , b_matrix_system   )
+  deallocate( Ap , bpa , bpb )
 
 end do ! gfm nodes
 
@@ -1001,7 +1084,7 @@ end do ! gfm nodes
 deallocate( least_dis_extp )
 
 ! deaollocate svd arrays
-deallocate( worku , iworku )
+! deallocate( work , iwork )
 
 
 ! - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -1024,6 +1107,8 @@ include 'rhs_exchng3_3d.F90'
 include 'rhs_exchng3_4d.F90'
 include 'get_weight_LSM_GFM.F90'
 include 'velocity_curv_gradient_tensor.F90'
+include 'pressure_curv_gradient_vector.F90'
+include 'set_svd_parameters.F90'
 !include 'get_max_distance_neighbourhood.F90'
 
 include 'velocity_gradient_extrapolation_free_surface_lsqm.F90'

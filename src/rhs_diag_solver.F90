@@ -156,52 +156,54 @@ subroutine rhs_diag_solver ()
       end if
 
       ! Blanking rhs extrapolation
-      if (nblk /=0) then
+      if ( nblk /=0 ) then
+         
+         do nb = 1 , nblk
    
-         nb = 1
-   
-         i = li_blk_ia(1,nb)
-   
-         if ( blktype(1,nb,myzone) == 0 .and. i > i_mysta+1 ) then
+            i = li_blk_ia(1,nb)
+      
+            if ( blktype(1,nb,myzone) == 0 .and. i > i_mysta+1 ) then
+                     
+               do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
+               do j = max( j_mysta , li_blk_ja(n,nb) ) , min( j_myend , li_blk_jb(n,nb) ) 
+      
+                  rh(1,i,j,k)   = four/three * rh(1  ,i-1,j,k) - & ! i = ib_ini - 1
+                                  one /three * rh(1  ,i-2,j,k)     ! i = ib_ini - 2
                   
-            do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
-            do j = max( j_mysta , li_blk_ja(n,nb) ) , min( j_myend , li_blk_jb(n,nb) ) 
+                  rh(2:4,i,j,k) =        two * rh(2:4,i-1,j,k) - & ! i = ib_ini - 1
+                                         one * rh(2:4,i-2,j,k)     ! i = ib_ini - 2
+      
+                  if ( non_slip_wall_blanking ) rh(2:4,i,j,k) = zero
    
-               rh(1,i,j,k)   = four/three * rh(1  ,i-1,j,k) - & ! i = ib_ini - 1
-                               one /three * rh(1  ,i-2,j,k)     ! i = ib_ini - 2
-               
-               rh(2:4,i,j,k) =        two * rh(2:4,i-1,j,k) - & ! i = ib_ini - 1
-                                      one * rh(2:4,i-2,j,k)     ! i = ib_ini - 2
-   
-               if ( non_slip_wall_blanking ) rh(2:4,i,j,k) = zero
-
-            end do
-            end do
-   
-         end if
-   
-         i = li_blk_ib(1,nb)
-   
-         if ( blktype(2,nb,myzone) == 0 .and. i < i_myend-1 ) then
+               end do
+               end do
+      
+            end if
+      
+            i = li_blk_ib(1,nb)
+      
+            if ( blktype(2,nb,myzone) == 0 .and. i < i_myend-1 ) then
+                     
+               do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
+               do j = max( j_mysta , li_blk_ja(n,nb) ) , min( j_myend , li_blk_jb(n,nb) ) 
+      
+                  rh(1,i,j,k)   = four/three * rh(1  ,i+1,j,k) - & ! i = ib_end + 1
+                                  one /three * rh(1  ,i+2,j,k)     ! i = ib_end + 2
                   
-            do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
-            do j = max( j_mysta , li_blk_ja(n,nb) ) , min( j_myend , li_blk_jb(n,nb) ) 
+                  rh(2:4,i,j,k) =        two * rh(2:4,i+1,j,k) - & ! i = ib_end + 1
+                                         one * rh(2:4,i+2,j,k)     ! i = ib_end + 2
+      
+                  if ( non_slip_wall_blanking ) rh(2:4,i,j,k) = zero
    
-               rh(1,i,j,k)   = four/three * rh(1  ,i+1,j,k) - & ! i = ib_end + 1
-                               one /three * rh(1  ,i+2,j,k)     ! i = ib_end + 2
-               
-               rh(2:4,i,j,k) =        two * rh(2:4,i+1,j,k) - & ! i = ib_end + 1
-                                      one * rh(2:4,i+2,j,k)     ! i = ib_end + 2
-   
-               if ( non_slip_wall_blanking ) rh(2:4,i,j,k) = zero
-
-            end do
-            end do
-   
-         end if
-   
+               end do
+               end do
+      
+            end if
+      
+         end do
+      
       end if
-   
+
    end if ! if (n == 1)
 
    ! compute Ma^(-1) * (R)
@@ -605,49 +607,51 @@ subroutine rhs_diag_solver ()
       ! Blanking rhs extrapolation
       if (nblk /=0) then
    
-         nb = 1
+         do nb = 1 , nblk
          
-         j = li_blk_ja(1,nb)
-   
-         if ( blktype(3,nb,myzone) == 0 .and. j > j_mysta+1 ) then
+            j = li_blk_ja(1,nb)
+      
+            if ( blktype(3,nb,myzone) == 0 .and. j > j_mysta+1 ) then
+                     
+               do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
+               do i = max( i_mysta , li_blk_ia(n,nb) ) , min( i_myend , li_blk_ib(n,nb) ) 
+      
+                  rh(1,i,j,k)   = four/three * rh(1  ,i,j-1,k) - & ! j = jb_ini - 1
+                                  one /three * rh(1  ,i,j-2,k)     ! j = jb_ini - 2
                   
-            do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
-            do i = max( i_mysta , li_blk_ia(n,nb) ) , min( i_myend , li_blk_ib(n,nb) ) 
-   
-               rh(1,i,j,k)   = four/three * rh(1  ,i,j-1,k) - & ! j = jb_ini - 1
-                               one /three * rh(1  ,i,j-2,k)     ! j = jb_ini - 2
-               
-               rh(2:4,i,j,k) =        two * rh(2:4,i,j-1,k) - & ! j = jb_ini - 1
-                                      one * rh(2:4,i,j-2,k)     ! j = jb_ini - 2
-   
-               if ( non_slip_wall_blanking ) rh(2:4,i,j,k) = zero
-   
-            end do
-            end do
-   
-         end if
-   
-         j = li_blk_jb(1,nb)
-   
-         if ( blktype(4,nb,myzone) == 0 .and. j < j_mysta-1 ) then
+                  rh(2:4,i,j,k) =        two * rh(2:4,i,j-1,k) - & ! j = jb_ini - 1
+                                         one * rh(2:4,i,j-2,k)     ! j = jb_ini - 2
+      
+                  if ( non_slip_wall_blanking ) rh(2:4,i,j,k) = zero
+      
+               end do
+               end do
+      
+            end if
+      
+            j = li_blk_jb(1,nb)
+      
+            if ( blktype(4,nb,myzone) == 0 .and. j < j_mysta-1 ) then
+                     
+      
+               do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
+               do i = max( i_mysta , li_blk_ia(n,nb) ) , min( i_myend , li_blk_ib(n,nb) ) 
+      
+                  rh(1,i,j,k)   = four/three * rh(1  ,i,j+1,k) - & ! j = jb_end + 1
+                                  one /three * rh(1  ,i,j+2,k)     ! j = jb_end + 2
                   
-   
-            do k = max( k_mysta , li_blk_ka(n,nb) ) , min( k_myend , li_blk_kb(n,nb) ) 
-            do i = max( i_mysta , li_blk_ia(n,nb) ) , min( i_myend , li_blk_ib(n,nb) ) 
-   
-               rh(1,i,j,k)   = four/three * rh(1  ,i,j+1,k) - & ! j = jb_end + 1
-                               one /three * rh(1  ,i,j+2,k)     ! j = jb_end + 2
-               
-               rh(2:4,i,j,k) =        two * rh(2:4,i,j+1,k) - & ! j = jb_end + 1
-                                      one * rh(2:4,i,j+2,k)     ! j = jb_end + 2
-   
-               if ( non_slip_wall_blanking ) rh(2:4,i,j,k) = zero
-   
-            end do
-            end do
-   
-         end if
-   
+                  rh(2:4,i,j,k) =        two * rh(2:4,i,j+1,k) - & ! j = jb_end + 1
+                                         one * rh(2:4,i,j+2,k)     ! j = jb_end + 2
+      
+                  if ( non_slip_wall_blanking ) rh(2:4,i,j,k) = zero
+      
+               end do
+               end do
+      
+            end if
+
+         end do
+
       end if   
    
    end if ! if (n == 1)

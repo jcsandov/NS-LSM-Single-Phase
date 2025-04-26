@@ -9,7 +9,7 @@ import socket
 try:
     actions = sys.argv
     for action in actions[2::]:
-        if action not in ["compile", "make_clean", "setup", "run", "clean_output", "clean_setup_log"]:
+        if action not in ["compile", "make_clean", "setup", "run", "clean_output", "clean_setup_log","restart_simulation"]:
             raise ValueError
 
 except:
@@ -373,7 +373,7 @@ def write_directory(parameters):
 
     decofiles_dir    = f"{current_directory}/{p['decofiles_directory']}"
 
-    filestat_dir      = f"{directory}filestat"
+    filestat_path      = f"{current_directory}/filestat"
 
 
     if not os.path.exists(combined_dir):
@@ -400,7 +400,7 @@ def write_directory(parameters):
     if not os.path.exists(decofiles_dir):
         os.makedirs(decofiles_dir)
 
-    if not os.path.exists(filestat_dir):
+    if not os.path.exists(filestat_path):
         print(f"\nGenerating filestat ...")
         f = open("filestat", "w")
         f.write('0.0 \t 0')
@@ -519,6 +519,60 @@ def run(parameters):
         # Default case if the server name is not recognized
         print(f"Unknown server: {server_name}. Please configure the correct execution command.")
 
+def restart_simulation(parameters):
+
+    p = parameters
+
+    # Get the hostname of the server
+    server_name = socket.gethostname()
+
+    # I move to the postproc folder
+    postproc_folder = f"{current_working_directory}/postproc" 
+    os.chdir(postproc_folder)
+
+    # execute the routines that create phi.restart and solu.restart
+    execute(f"./mk_solu.restart {p['number_of_processes']}")
+    execute(f"./mk_phi.restart {p['number_of_processes']}")
+
+    # This generates the files phi.restart and solu.restart in output. Now I need to move them
+    # to the working directory
+
+    # come back to the working directory
+    os.chdir(current_working_directory)
+    # move to the folder where the restart files are
+    restart_files_folder = f"{current_working_directory}/output/solufiles"
+    os.chdir(restart_files_folder)
+    
+    # copy them to the working directory
+    execute(f"cp solu.restart ../../")
+    execute(f"cp phi.restart ../../")
+
+    # move back to the working directory
+    os.chdir(current_working_directory)
+
+    # change the name of the files
+    execute(f"mv solu.restart solu")
+    execute(f"mv phi.restart phi_ini")
+
+    # remove stop.now in case it's present
+    execute(f"rm -rf stop.now")
+
+    # copy control to the output directory
+    directory = f"{current_working_directory}/{p['output_directory']}"
+    control_file_path = actions[1]
+    shutil.copy(control_file_path, f"{directory}/{control_file_path.split('.dat')[0]}_{dt_string}.dat")
+
+    # Check the server and choose the command to execute
+    if 'leftraru' in server_name:
+        # Server is leftraru2, use sbatch
+        execute(f"sbatch {p['queue_filename']}")
+    elif 'Dell' in server_name:
+        # Server is Dellemc, use mpirun
+        execute(f"mpirun -np {p['number_of_processes']} channel > output.dat 2>&1 &")
+    else:
+        # Default case if the server name is not recognized
+        print(f"Unknown server: {server_name}. Please configure the correct execution command.")        
+
 def clean_output(parameters):
 
     p = parameters
@@ -590,8 +644,8 @@ def run_action(action):
         clean_output(parameters)
     if action == "clean_setup_log":
         clean_setup_log()
-
-
+    if action == "restart_simulation":
+        restart_simulation(parameters)
 # ------------------
 # Main
 # ------------------
@@ -610,4 +664,6 @@ if "setup" in actions:
     run_action("setup")
 if "run" in actions:
     run_action("run")
+if "restart_simulation" in actions:
+    run_action("restart_simulation")
 

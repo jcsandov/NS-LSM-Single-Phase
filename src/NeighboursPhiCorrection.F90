@@ -187,14 +187,23 @@ subroutine NeighboursPhiCorrection ( nnodes            , &
 
       if ( InterfaceNodesID(igc,jgc,kgc) >= 0 ) cycle
 
-      kminus = max( kgc - 3 , ksta )
-      kplus  = min( kgc + 3 , kend )
+      !kminus = max( kgc - 3 , ksta )
+      !kplus  = min( kgc + 3 , kend )
 
-      jminus = max( jgc - 3 , jsta )
-      jplus  = min( jgc + 3 , jend )
+      !jminus = max( jgc - 3 , jsta )
+      !jplus  = min( jgc + 3 , jend )
 
-      iminus = max( igc - 3 , ista )
-      iplus  = min( igc + 3 , iend )
+      !iminus = max( igc - 3 , ista )
+      !iplus  = min( igc + 3 , iend )
+
+      kminus = max( kgc - 4 , ksta )
+      kplus  = min( kgc + 4 , kend )
+
+      jminus = max( jgc - 4 , jsta )
+      jplus  = min( jgc + 4 , jend )
+
+      iminus = max( igc - 4 , ista )
+      iplus  = min( igc + 4 , iend )
 
       PnodeAround = any( InterfaceNodesID( iminus:iplus , jminus:jplus , kminus:kplus ) > 0 )
 

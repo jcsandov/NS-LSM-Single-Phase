@@ -182,7 +182,7 @@ subroutine TotalWaterVolume( phizero           , &
       
       if ( abs( phizero(i,j,k) ) < eps_sims ) PhaseChangeNode = .true. 
 
-      if ( .not.(PhaseChangeNode) ) then
+      if ( .not.( PhaseChangeNode ) ) then
          
          searchloop1: &
          do ksearch = kminus , kplus
@@ -227,7 +227,10 @@ subroutine TotalWaterVolume( phizero           , &
       if( PhaseChangeNode ) then
 
          ! Any node somehow surrounded by the free-surface is gonna be advected         
-         if( present( AdvectionNodes ) ) AdvectionNodes(i,j,k) = 1
+         !if( present( AdvectionNodes ) ) AdvectionNodes(i,j,k) = 1
+         if( present( AdvectionNodes ) ) then
+            AdvectionNodes( iminus : iplus , jminus : jplus , kminus : kplus ) = 1
+         end if
 
       end if
 

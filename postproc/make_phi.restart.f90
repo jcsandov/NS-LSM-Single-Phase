@@ -1,34 +1,13 @@
-        
-!==================================================================================
-! make_phi_restart: 
-! -----------------
-!
-! compilation: 
-! --------------
-!
-! gfortran -o mk_phi.restart make_phi.restart.f90 str_int.o f2kcli.o
-!
-!
-! execution: 
-! ----------
-! 
-! ./mk_phi.restart nproc 
-!
-! where nproc is the amount of processors used for the simulation
-! 
-!==================================================================================
-! 
+!Uso la misma rutina para la solucipn levemente modificado para el phi
 
-! ifort -o postproc postproc.ussl.f90 f2kcli.o str_int.o
 program postprocess
 
-   use f2kcli
-   use str_int
-
+  use f2kcli
+  use str_int
   implicit none 
 
   integer, parameter :: rdf = selected_real_kind(p=7)
-  
+   
 
   character (len = 256) :: line
   character (len = 256) :: exe
@@ -37,7 +16,6 @@ program postprocess
 
   integer, parameter :: nzone = 1 
   integer, parameter :: me = 5
-  integer, parameter :: me_save =5
   integer :: icnw
 
   integer, dimension(nzone) :: im, jm, km
@@ -62,7 +40,6 @@ program postprocess
 
   integer :: dummy_int
   real (kind = rdf) :: dummy_real
-
   integer, dimension (:), allocatable :: &
        ks, &
        ke, &
@@ -76,59 +53,47 @@ program postprocess
   integer, dimension (:), allocatable :: myzone, nproc_nz
 
   integer, dimension (:,:), allocatable :: dims, coords
-
-  character (len = 256) :: debugname
-
-
-  integer :: num_debug, i_deb
-  character (len = 256) :: debug_name
-
+  
   character (len = 256) :: dirname
 
   ! get command-line input
   ! 
-   narg = command_argument_count ()
+  narg = command_argument_count ()
 
-   call get_command (line)
-   call get_command_argument (0, exe)
+  call get_command (line)
+  call get_command_argument (0, exe)
 
-  if (narg /= 4) then
-	 print *,'nproc,ntimeStart,ntimeEnd,ntimeSkip'
-     !print *, 'Need number of processors for ', trim(exe)
-     !print *, 'command syntax: ', trim(exe), 'nproc'
+  if (narg /= 1) then
+     print *, 'Need number of processors for ', trim(exe)
+     print *, 'command syntax: ', trim(exe), 'nproc'
      stop
   end if
 
+  call get_command_argument (1, cmd); call decode(nproc, cmd)
 
-
-
-   call get_command_argument (1, cmd); call decode(nproc, cmd)
-   call get_command_argument (2, cmd); call decode(ntimeStart, cmd)
-   call get_command_argument (3, cmd); call decode(ntimeEnd, cmd)
-   call get_command_argument (4, cmd); call decode(ntimeSkip, cmd)
-
-  open (unit = 21, file = '../ind3dmg.dat', form = 'formatted')
-  read (unit = 21, fmt = *) 
+! nproc = 25
+print *,'start', nproc
+open (unit = 21, file = '../ind3dmg.dat', form = 'formatted')
+  read (unit = 21, fmt = *)
   do nz = 1, nzone
   read (unit = 21, fmt = *) im(nz), jm(nz), km(nz)
   end do
   do nz = 1, nzone
   read (unit = 21, fmt = *)
   end do
-  !read (unit = 21, fmt = *) 
-  !read (unit = 21, fmt = *)
-  read (unit = 21, fmt = *) 
-  read (unit = 21, fmt = *) 
-  read (unit = 21, fmt = *) 
+  read (unit = 21, fmt = *)
+  read (unit = 21, fmt = *)
+  read (unit = 21, fmt = *)
+ ! read (unit = 21, fmt = *)
   read (unit = 21, fmt = *) dummy_real, dummy_real, dummy_int, icnw
   close(unit = 21)
-  print*, 'icnw=',icnw
+
+print *,'ind3dmg read',icnw
 
   open (unit = 41, file = "../directory", form = "formatted")
 	read(unit = 41, fmt = "(a)") dirname
   close (unit = 41)
-
-
+  
   ! compute 3d decomposition
   ! =============================
   ! 
@@ -148,7 +113,7 @@ program postprocess
   open (2, file = '../nproc.dat')
   read (2,*) (nproc_nz(nz), nz = 1, nzone)
   close(2)
-
+print *,'nproc.dat read'
   ! establish the myzone to which this processor belongs
   !
   do np = 0, nproc - 1
@@ -164,10 +129,9 @@ program postprocess
   end do
 
   ! read dims
-  ! read dims
   do np = 0, nproc - 1
 
-     offset = 10
+     offset = 10 !70
      myunit = np + offset
 
      write (filename, fmt = '(a,i3.3)') '../decofiles/dims_coords', myunit
@@ -177,8 +141,6 @@ program postprocess
      close(unit = myunit)
 
   end do
-
-
 
   do np = 0, nproc - 1
      if (dims(1,np) == 1) then
@@ -202,28 +164,10 @@ program postprocess
   end do
 
 
+  ! postprocessing solu
+  call process_solu_files ()
 
-
-
-
-
-
-  do ntime = ntimeStart, ntimeEnd, ntimeSkip
-
-	!aqui proceso phi
-     if ((ntime / ntimeSkip) * ntimeSkip == ntime) then
-
- 	         write(debugname, fmt ='(a,i6.6)') 'phi',ntime
-                 call process_debug_files (debugname)
-                !write(debugname, fmt ='(a,i6.6)') 'nband',ntime
-                !call process_debug_files (debugname)
-     
-        print *, 'processing phi',ntime
-	print *, " "
-     end if
-
- end do
-  deallocate (is, ie, js, je, ks, ke, myzone)
+  deallocate (is, ie, js, je, ks, ke)
 
 contains
 
@@ -269,25 +213,20 @@ end subroutine mpe_decomp1d
 
 ! --
 
+subroutine process_solu_files ()
 
-! --
+  real (kind = rdf), dimension(:,:,:,:,:), allocatable :: q
+  real (kind = rdf), dimension(:,:,:,:,:), allocatable :: qn
+  real (kind = rdf), dimension(:,:,:,:),   allocatable :: nu
+  real (kind = rdf), dimension(:,:,:,:), allocatable :: phi, phi_static  
 
-subroutine process_debug_files (filenameD)
+  real (kind = rdf), dimension(:,:,:,:), allocatable :: qtmp
+  real (kind = rdf), dimension(:,:,:,:), allocatable :: qntmp
+  real (kind = rdf), dimension(:,:,:),   allocatable :: nutmp
 
-  ! process usolu.ntime.np restart files
-  ! ====================================
-  ! 
 
-  integer :: ts
-
-  real (kind = rdf), dimension(:,:,:,:), allocatable :: varD
-
-  real (kind = rdf), dimension(:,:,:), allocatable :: varDtmp
   integer :: imx, jmx, kmx
-
-  character (len = *) :: filenameD
-  character (len = 256) :: filenameOUT
-
+  
   imx = maxval(im)
   jmx = maxval(jm)
   kmx = maxval(km)
@@ -295,54 +234,72 @@ subroutine process_debug_files (filenameD)
   ! process solu.np restart files
   ! =============================
   ! 
-  allocate (varD(1:imx,1:jmx,1:kmx,nzone))
+  allocate (q(1:me,1:imx,1:jmx,1:kmx,nzone), &
+           qn(1:me,1:imx,1:jmx,1:kmx,nzone), &
+                nu(1:imx,1:jmx,1:kmx,nzone), &
+                phi(1:imx,1:jmx,1:kmx,nzone), &
+                phi_static(1:imx,1:jmx,1:kmx,nzone)   )
+
+  
+
   do np = 0, nproc - 1
 
-     allocate (varDtmp(is(np):ie(np),js(np):je(np),ks(np):ke(np))  )
+     allocate (qtmp(1:me,is(np):ie(np),js(np):je(np),ks(np):ke(np)), &
+              qntmp(1:me,is(np):ie(np),js(np):je(np),ks(np):ke(np)), &
+                   nutmp(is(np):ie(np),js(np):je(np),ks(np):ke(np))  )
 
-     offset = 70
+  
+     offset = 60!
      myunit = np + offset
 
-     write (filenameOUT,fmt='(2a,a,a,i2.2)') &
-                 trim(dirname),'debugfiles/', &
-                 trim(filenameD),'.',myunit -offset
 
 
-     print *,'process file ',trim(filenameD)
-     open (unit = myunit, file = trim(filenameOUT), form = 'unformatted')
+     !read solu
+     !-------------------------------------------------------------------------
+     !write (filename, fmt = '(a,i3.3)') '/home/matias/output/solufiles/solu.', myunit - offset
+
      
-     read (unit = myunit) varDtmp(:,:,:)
+     write (filename,fmt='(2a,i3.3)') &
+     trim(dirname),'solufiles/phi.', myunit - offset
+     open (unit = myunit, file = trim(filename), form = 'unformatted')
+          
 
+        read (unit = myunit) qtmp(1,:,:,:)
+        read (unit = myunit) qtmp(2,:,:,:)
+
+     
      close (unit = myunit)
+     !---------------------------------------------------------------------------
 
      ! store this part in global vectors
      ! ---------------------------------
      ! 
-     varD(is(np):ie(np),js(np):je(np),ks(np):ke(np),myzone(np)) = varDtmp(:,:,:)
-     deallocate (varDtmp)
+       phi(is(np):ie(np),js(np):je(np),ks(np):ke(np),myzone(np)) = qtmp(1,:,:,:)
+       phi_static(is(np):ie(np),js(np):je(np),ks(np):ke(np),myzone(np)) = qtmp(2,:,:,:)
+      !qn(:,is(np):ie(np),js(np):je(np),ks(np):ke(np),myzone(np)) = qntmp
+      !  nu(is(np):ie(np),js(np):je(np),ks(np):ke(np),myzone(np)) = nutmp
+
+     deallocate(qtmp, qntmp, nutmp)
+
 
   end do
 
-  ! changes required in mk_tec etc.
-  ! if writing of files stay as below
+  ! write so they can be read by cduct
   ! 
-  
 
-
-  write(filenameOUT, fmt = '(2a,a)') &
-                trim(dirname),'surface/',trim(filenameD)
-
-  open  (unit = 22, file = trim(filenameOUT), form = 'unformatted')
+ 
+  write(filename, fmt = '(2a)') trim(dirname),'solufiles/phi.restart'
+  open  (unit = 22, file = trim(filename), form = 'unformatted')
   do nz = 1, nzone
-
-        write (unit = 22) varD(1:im(nz),1:jm(nz),1:km(nz),nz)
+     write (unit = 22) phi(1:im(nz),1:jm(nz),1:km(nz),nz)
+     write (unit = 22) phi_static(1:im(nz),1:jm(nz),1:km(nz),nz)
   end do
   close (unit = 22)
 
+  deallocate (q, qn, nu, phi, phi_static)
+  
 
-  deallocate (varD )
-
-end subroutine process_debug_files
+end subroutine process_solu_files
 
 ! --
 

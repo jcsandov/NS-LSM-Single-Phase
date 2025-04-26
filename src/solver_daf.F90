@@ -1,23 +1,22 @@
-subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
-                        decide_calc_pk, il, iu, jl, ju, kl, ku  , & ! 2
-                        igp, jgp, kgp                           , & ! 3
-                        dc, de, dz                              , & ! 4
-                        q                                       , & ! 5
-                        qn                                      , & ! 6
-                        qnm1                                    , & ! 7
-                        csi                                     , & ! 8
-                        eta                                     , & ! 9
-                        zet                                     , & ! 10
-                        aj                                      , & ! 11
-                        xnut                                    , & ! 12
-                        rh                                      , & ! 14
+subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , &
+                        decide_calc_pk, il, iu, jl, ju, kl, ku  , &
+                        igp, jgp, kgp                           , &
+                        dc, de, dz                              , &
+                        q                                       , &
+                        qn                                      , &
+                        qnm1                                    , &
+                        csi                                     , &
+                        eta                                     , &
+                        zet                                     , &
+                        aj                                      , &
+                        xnut                                    , &
+                        rh                                      , &
                         phi                                     , &
                         phi_gradient                            , &
                         h_gradient                              , &
                         x, y ,z                                 , &
                         iteraciontiempo                           &
                       )                       
-!     uij )                             ! 31
 
 
    ! Solve the system of equations using approximate factorization
@@ -131,6 +130,10 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
 
    real (kind = rdf), dimension(:,:,:), allocatable     ::  dtau , diss
   
+   ! gfm list
+   integer, save :: gfmnodes_sdaf
+   integer, dimension(:,:), allocatable , save :: gfmnodes_list_sdaf
+
 
    !for debugging
    character (len = 256) :: debugname
@@ -250,6 +253,8 @@ subroutine solver_daf ( me, decide_grid_level, decide_recalc_rh , & ! 1
    !    
 
    qold_af = q
+
+   if ( itc == 1 ) call get_gfm_sdaf_list()
 
    !DDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD
    ! I'm gonna extrapolate the pressure values to the air phase, no matter the zero
@@ -799,7 +804,8 @@ contains
    !include 'near_free_surface_q_update.F90'
    include 'PhiGradientVector.F90'
    include 'VelocityGradientTensor.F90'
-
+   include 'get_gfm_sdaf_list.F90'
+   
 !  include 'rhs_flux.F90'
 !  include 'rhs_diss_quick.F90'
 !  include 'rhs_diss_matrix.F90'

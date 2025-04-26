@@ -1,23 +1,22 @@
-!==================================================================================
-! make_solu_restart: 
-! -----------------
-!
-! compilation: 
-! --------------
-!
-! gfortran -o mk_solu.restart make_solu.restart.f90 str_int.o f2kcli.o
-!
-!
-! execution: 
-! ----------
-! 
-! ./mk_solu.restart nproc 
-!
-! where nproc is the amount of processors used for the simulation
-! 
-!==================================================================================
-! 
 
+!============================================================
+!
+!
+! postprocess : post-process output of mpi program by
+! -----------   combining into one file the output written 
+!               separately by each processor
+!               
+! author      : J Paik <joongcheol.paik@ce.gatech.edu>
+! ------
+!
+! date        : 2004 September
+! ----
+! 
+! version     : 3.0
+! -------
+! 
+!============================================================
+! 
 program postprocess
 
   use f2kcli

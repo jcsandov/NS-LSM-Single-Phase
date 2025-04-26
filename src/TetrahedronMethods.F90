@@ -183,8 +183,11 @@ module TetrahedronMethods
 
       PhiSign = 0
 
-      where ( phi_tetrahedron   >  eps_sims ) PhiSign =  1
-      where ( phi_tetrahedron   < -eps_sims ) PhiSign = -1
+      !where ( phi_tetrahedron   >  eps_sims ) PhiSign =  1
+      !where ( phi_tetrahedron   < -eps_sims ) PhiSign = -1
+
+      where ( phi_tetrahedron   >  tiny(eps_sims) ) PhiSign =  1
+      where ( phi_tetrahedron   < -tiny(eps_sims) ) PhiSign = -1
 
       if ( all( PhiSign == 1 ) ) then
       
@@ -566,9 +569,19 @@ module TetrahedronMethods
             
             ! linear interpolation coefficient:  0 < s < 1
 
-            if ( abs( DeltaPhiDenomInterpolation ) < eps_sims ) then
+            !if ( abs( DeltaPhiDenomInterpolation ) < eps_sims ) then
+            ! eps_sims^3 = 1.0947644252537633E-047
+            if ( abs( DeltaPhiDenomInterpolation ) < eps_sims ** three ) then
                s = zero
+               print *, ' '
                print *, 'Isosurface on more than one corner'
+               print *, 'phiV1 = ', phi_tetrahedron(1)
+               print *, 'phiV2 = ', phi_tetrahedron(2)
+               print *, 'phiV3 = ', phi_tetrahedron(3)
+               print *, 'phiV4 = ', phi_tetrahedron(4)
+               print *, 'phiStartVertex = ', phi_tetrahedron(StartVertex)
+               print *, 'phiEndVertex   = ', phi_tetrahedron(EndVertex)
+
             else
                s  = phi_tetrahedron(EndVertex) / DeltaPhiDenomInterpolation 
             end if

@@ -182,14 +182,23 @@ subroutine GetIsosurfaceAndDistances( nnodes          , &
       ! adjacent reconstructed isosurfaces represented by triangles inside
       ! tetrahedrons
 
-      kminus = maxval( (/ kidx-3 , ksta /) )
-      kplus  = minval( (/ kidx+3 , kend /) )
+      !kminus = maxval( (/ kidx-3 , ksta /) )
+      !kplus  = minval( (/ kidx+3 , kend /) )
 
-      jminus = maxval( (/ jidx-3 , jsta /) )
-      jplus  = minval( (/ jidx+3 , jend /) )
+      !jminus = maxval( (/ jidx-3 , jsta /) )
+      !jplus  = minval( (/ jidx+3 , jend /) )
 
-      iminus = maxval( (/ iidx-3 , ista /) )
-      iplus  = minval( (/ iidx+3 , iend /) )
+      !iminus = maxval( (/ iidx-3 , ista /) )
+      !iplus  = minval( (/ iidx+3 , iend /) )
+
+      kminus = max( kidx-4 , ksta )
+      kplus  = min( kidx+4 , kend )
+
+      jminus = max( jidx-4 , jsta )
+      jplus  = min( jidx+4 , jend )
+
+      iminus = max( iidx-4 , ista )
+      iplus  = min( iidx+4 , iend )
 
       do ksearch = kminus , kplus
       do jsearch = jminus , jplus

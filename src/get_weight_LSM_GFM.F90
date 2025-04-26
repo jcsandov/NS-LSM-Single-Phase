@@ -31,7 +31,7 @@ subroutine get_weight_LSM_GFM( xs , ys , zs , nvec , dmax , ii , jj , kk , weigh
   delta_r(2) =  ys - y(ii,jj,kk) 
   delta_r(3) =  zs - z(ii,jj,kk) 
 
-  num   = abs( dot_product( delta_r / norm2(delta_r)  , nvec ) )**(three/two)
+  num   = abs( dot_product( delta_r / norm2(delta_r)  , nvec ) )**two!**(three/two)
   denom = one !( norm2(delta_r) / dmax ) + eps_denom
 
   weight = num / denom
