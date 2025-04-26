@@ -585,6 +585,7 @@ def clean_output(parameters):
     execute(f"rm -f GlobalMass*")
     execute(f"rm -f GlobalVolume*")
     execute(f"rm -f triangulation*")
+    execute(f"rm -f filestat")
     execute(f"rm -f cc*")
 
     current_directory = os.getcwd()
